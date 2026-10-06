@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const accesoSchema = require('./Acceso');
 
 const archivoSchema = new mongoose.Schema({
     nombre: { type: String, required: true },

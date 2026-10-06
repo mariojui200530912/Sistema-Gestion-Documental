@@ -13,6 +13,20 @@ const storage = new GridFsStorage({
     }
 });
 
-const upload = multer({ storage });
+const fileFilter = (req, file, cb) => {
+    const extensionsPermitidas = /txt|md/;
+    const mimetypesPermitidos = /text\/plain|text\/markdown/;
+
+    const extname = extensionsPermitidas.test(file.originalname.split('.').pop());
+    const mimetype = mimetypesPermitidos.test(file.mimetype);
+
+    if (extname && mimetype) {
+        return cb(null, true);
+    } else {
+        return cb(new Error('Solo se permiten archivos de texto (.txt, .md)'), false);
+    }
+}
+
+const upload = multer({ storage, fileFilter });
 
 module.exports = upload;

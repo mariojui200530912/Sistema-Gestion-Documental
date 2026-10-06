@@ -1,9 +1,5 @@
 const mongoose = require('mongoose');
-
-const accesoSchema = new mongoose.Schema({
-    usuario_id : { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', required: true },
-    nivel_permiso: { type: String, enum: ['lectura', 'escritura'], required: true }
-}, { _id: false });
+const accesoSchema = require('./Acceso');
 
 const carpetaSchema = new mongoose.Schema({
     nombre: { type: String, required: true },
