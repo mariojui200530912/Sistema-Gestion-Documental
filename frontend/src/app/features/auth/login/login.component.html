@@ -1,0 +1,41 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+    
+    <div class="text-center mb-8">
+      <h2 class="text-3xl font-bold text-gray-900">Iniciar Sesión</h2>
+      <p class="text-gray-500 mt-2">Gestor Documental Corporativo</p>
+    </div>
+
+    <!-- Mostrar alerta si hay error -->
+    <div *ngIf="mensajeError" class="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6 border border-red-200">
+      {{ mensajeError }}
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+      
+      <div>
+        <label for="correo" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+        <input type="email" id="correo" formControlName="correo" placeholder="ejemplo@empresa.com"
+               class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
+        <span *ngIf="loginForm.get('correo')?.touched && loginForm.get('correo')?.invalid" class="text-red-500 text-xs mt-1 block">
+          Ingresa un correo válido.
+        </span>
+      </div>
+
+      <div>
+        <label for="contrasena" class="block text-sm font-medium text-gray-700">Contraseña</label>
+        <input type="password" id="contrasena" formControlName="contrasena" placeholder="********"
+               class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
+        <span *ngIf="loginForm.get('contrasena')?.touched && loginForm.get('contrasena')?.invalid" class="text-red-500 text-xs mt-1 block">
+          La contraseña es obligatoria.
+        </span>
+      </div>
+
+      <button type="submit" [disabled]="cargando"
+              class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors">
+        {{ cargando ? 'Autenticando...' : 'Ingresar al sistema' }}
+      </button>
+      
+    </form>
+  </div>
+</div>

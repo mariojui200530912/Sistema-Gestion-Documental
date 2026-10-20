@@ -19,13 +19,13 @@ exports.autenticarUsuario = async (req, res) => {
         });
     } catch (error) {
         if (error.message === 'CREDENCIALES_INVALIDAS') {
-            return res.status(401).json({ message: 'Correo o contraseña incorrectos' });
+            return res.status(401).json({ mensaje: 'Correo o contraseña incorrectos' });
         }
         if (error.message === 'CUENTA_DESACTIVADA') {
-            return res.status(403).json({ message: 'La cuenta está desactivada. Contacta al administrador.' });
+            return res.status(403).json({ mensaje: 'La cuenta está desactivada. Contacta al administrador.' });
         }
         console.error(error);
-        res.status(500).json({ message: 'Error al autenticar el usuario' });
+        res.status(500).json({ mensaje: 'Error al autenticar el usuario' });
     }
 };
 
@@ -50,7 +50,7 @@ exports.registrarUsuario = async (req, res) => {
             return res.status(400).json({ message: 'El correo ya está registrado' });
         }
         console.error(error);
-        res.status(500).json({ message: 'Error al registrar el usuario' });
+        res.status(500).json({ mensaje: 'Error al registrar el usuario' });
     }
 };
 
@@ -60,7 +60,7 @@ exports.obtenerUsuarios = async (req, res) => {
         res.json({ usuarios });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Error al obtener los usuarios' });
+        res.status(500).json({ mensaje: 'Error al obtener los usuarios' });
     }
 };
 
@@ -71,10 +71,10 @@ exports.obtenerUsuario = async (req, res) => {
         res.json({ usuario });
     } catch (error) {
         if (error.message === 'USUARIO_NO_ENCONTRADO') {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
+            return res.status(404).json({ mensaje: 'Usuario no encontrado' });
         }
         console.error(error);
-        res.status(500).json({ message: 'Error al obtener el usuario' });
+        res.status(500).json({ mensaje: 'Error al obtener el usuario' });
     }
 };
 
@@ -91,13 +91,13 @@ exports.actualizarUsuario = async (req, res) => {
        });
     } catch (error) {
         if (error.message === 'USUARIO_NO_ENCONTRADO') {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
+            return res.status(404).json({ mensaje: 'Usuario no encontrado' });
         }
         if (error.message === 'PERMISO_DENEGADO') {
-            return res.status(403).json({ message: 'No tienes permiso para actualizar este usuario' });
+            return res.status(403).json({ mensaje: 'No tienes permiso para actualizar este usuario' });
         }
         console.error(error);
-        res.status(500).json({ message: 'Error al actualizar el usuario' });
+        res.status(500).json({ mensaje: 'Error al actualizar el usuario' });
     }
 };
 
@@ -105,12 +105,12 @@ exports.eliminarUsuario = async (req, res) => {
     try {
         const idUsuario = req.params.id;
         const usuario = await usuarioService.desactivarUsuario(idUsuario);
-        res.json({ message: 'Usuario desactivado exitosamente', usuario });
+        res.json({ mensaje: 'Usuario desactivado exitosamente', usuario });
     } catch (error) {
         if (error.message === 'USUARIO_NO_ENCONTRADO') {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
+            return res.status(404).json({ mensaje: 'Usuario no encontrado' });
         }
         console.error(error);
-        res.status(500).json({ message: 'Error al desactivar el usuario' });
+        res.status(500).json({ mensaje: 'Error al desactivar el usuario' });
     }
 };

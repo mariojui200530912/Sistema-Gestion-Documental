@@ -4,10 +4,9 @@ require('dotenv').config();
 
 const storage = new GridFsStorage({
     url: process.env.MONGODB_URI,
-    options: { useNewUrlParser: true, useUnifiedTopology: true },
     file: (req, file) => {
         return {
-            filename: `${Date.now()}-${file.originalname}`,
+            filename: file.originalname,
             bucketName: 'uploads' // Nombre del bucket en GridFS
         };
     }
