@@ -7,6 +7,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
 router.use(authMiddleware);
 
 // Rutas GET
+router.get('/todas', authMiddleware, carpetaController.obtenerTodasLasCarpetas);
 router.get('/', carpetaController.obtenerRaiz);
 router.get('/:id', carpetaController.obtenerCarpeta);
 

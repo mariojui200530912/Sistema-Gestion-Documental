@@ -9,9 +9,6 @@ exports.subirArchivo = async (req, res) => {
         
         res.status(201).json({ mensaje: 'Archivo subido exitosamente', archivo: archivoSubido });
     } catch (error) {
-        if (error.message === 'CUOTA_EXCEDIDA') {
-            return res.status(400).json({ mensaje: 'No tienes suficiente espacio para subir este archivo' });
-        }
         if (error.message === 'NOMBRE_DUPLICADO') {
             return res.status(400).json({ mensaje: 'Ya existe un archivo con ese nombre en esta carpeta' });
         }

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Carpeta = require('../models/Carpeta');
 const Archivo = require('../models/Archivo');
 const HistorialActividad = require('../models/HistorialActividad');
@@ -29,6 +30,41 @@ class CarpetaService {
         return { carpetaActual, contenido: { carpetas, archivos } };
     }
 
+    async obtenerTodas(usuarioId){
+        const carpetas = await Carpeta.find({
+            propietario_id: usuarioId,
+            estado: 'activo'
+        })
+        .select('_id nombre carpeta_padre_id')
+        .lean();
+
+        const mapaCarpetas = {};
+        carpetas.forEach(c => {
+            mapaCarpetas[c._id.toString()] = c;
+        });
+
+        const carpetasConRuta = carpetas.map(carpeta => {
+            let ruta = carpeta.nombre;
+            let padreId = carpeta.carpeta_padre_id;
+
+            while (padreId && mapaCarpetas[padreId.toString()]) {
+                const padre = mapaCarpetas[padreId.toString()];
+                ruta = padre.nombre + ' / ' + ruta; // Concatenamos el nombre del padre
+                padreId = padre.carpeta_padre_id;
+            }
+
+            return {
+                _id: carpeta._id,
+                nombre: ruta, // Reemplazamos el nombre simple por la ruta completa jerárquica
+                carpeta_id: carpeta.carpeta_id
+            };
+        });
+
+        carpetasConRuta.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+        return carpetasConRuta;
+    }
+
     async crear(nombre, carpetaPadreId, usuarioId) {
         if (carpetaPadreId) {
             const padre = await Carpeta.findOne({ _id: carpetaPadreId, propietario_id: usuarioId, estado: 'activo' });
@@ -46,23 +82,34 @@ class CarpetaService {
             throw new Error('NOMBRE_DUPLICADO');
         }
 
-        const nuevaCarpeta = new Carpeta({
-            nombre,
-            propietario_id: usuarioId,
-            carpeta_padre_id: carpetaPadreId || null
-        });
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try{
+            const nuevaCarpeta = new Carpeta({
+                nombre,
+                propietario_id: usuarioId,
+                carpeta_padre_id: carpetaPadreId || null
+            });
 
-        await nuevaCarpeta.save();
+            await nuevaCarpeta.save({ session });
 
-        await HistorialActividad.create({
-            usuario_id: usuarioId,
-            recurso_id: nuevaCarpeta._id,
-            tipo_recurso: 'carpeta',
-            accion: 'creacion',
-            detalles: `Carpeta creada: ${nombre}`
-        });
+            await HistorialActividad.create([{
+                usuario_id: usuarioId,
+                recurso_id: nuevaCarpeta._id,
+                tipo_recurso: 'carpeta',
+                accion: 'creacion',
+                detalles: `Carpeta creada: ${nombre}`
+            }], { session });
 
-        return nuevaCarpeta;
+            await session.commitTransaction();
+            session.endSession();
+
+            return nuevaCarpeta;
+        }catch (error){
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
     }
 
     async renombrar(idCarpeta, nuevoNombre, usuarioId) {
@@ -82,15 +129,26 @@ class CarpetaService {
             throw new Error('NOMBRE_DUPLICADO');
         }
 
-        carpeta.nombre = nuevoNombre;
-        await carpeta.save();
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try{
+            carpeta.nombre = nuevoNombre;
+            await carpeta.save({ session });
 
-        await HistorialActividad.create({
-            usuario_id: usuarioId, recurso_id: carpeta._id, tipo_recurso: 'carpeta',
-            accion: 'edicion', detalles: `Carpeta renombrada a ${nuevoNombre}`
-        });
+            await HistorialActividad.create([{
+                usuario_id: usuarioId, recurso_id: carpeta._id, tipo_recurso: 'carpeta',
+                accion: 'edicion', detalles: `Carpeta renombrada a ${nuevoNombre}`
+            }], { session });
 
-        return carpeta;
+            await session.commitTransaction();
+            session.endSession();
+
+            return carpeta;
+        } catch (error){
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
     }
 
     async mover(idCarpeta, nuevaCarpetaPadreId, usuarioId) {
@@ -129,15 +187,25 @@ class CarpetaService {
             throw new Error('NOMBRE_DUPLICADO_DESTINO');
         }
 
-        carpetaMover.carpeta_padre_id = nuevaCarpetaPadreId || null;
-        await carpetaMover.save();
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            carpetaMover.carpeta_padre_id = nuevaCarpetaPadreId || null;
+            await carpetaMover.save({ session });
 
-        await HistorialActividad.create({
-            usuario_id: usuarioId, recurso_id: carpetaMover._id, tipo_recurso: 'carpeta',
-            accion: 'edicion', detalles: 'Carpeta movida de ubicación'
-        });
+            await HistorialActividad.create([{
+                usuario_id: usuarioId, recurso_id: carpetaMover._id, tipo_recurso: 'carpeta',
+                accion: 'edicion', detalles: 'Carpeta movida de ubicación'
+            }], {session});
+            await session.commitTransaction();
+            session.endSession();
 
-        return carpetaMover;
+            return carpetaMover;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
     }
 }
 

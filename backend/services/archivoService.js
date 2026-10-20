@@ -18,38 +18,44 @@ class ArchivoService {
         }
         
         const usuario = await Usuario.findById(usuarioId);
-        if (usuario.espacioUtilizado + file.size > usuario.espacioAsignado) {
-            const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: 'fs' });
-            await bucket.delete(file.id);
-            throw new Error('CUOTA_EXCEDIDA');
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try{
+            const nuevoArchivo = new Archivo({
+                nombre: file.filename,
+                propietario_id: usuarioId,
+                carpeta_id: carpetaId || null,
+                gridfs_id: file.id,
+                tamano: file.size,
+                tipo_archivo: file.mimetype,
+            });
+
+            await nuevoArchivo.save({ session });
+            usuario.espacioUtilizado += file.size;
+            await usuario.save({ session });
+
+            await HistorialActividad.create([{
+                usuario_id: usuarioId,
+                recurso_id: nuevoArchivo._id,
+                tipo_recurso: 'archivo',
+                accion: 'creacion',
+                detalle: `Archivo ${nuevoArchivo.nombre} subido a la carpeta ${carpetaId || 'raíz'}`,
+            }], {session});
+            await session.commitTransaction();
+            session.endSession();
+
+            return nuevoArchivo;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
         }
-        const nuevoArchivo = new Archivo({
-            nombre: file.filename,
-            propietario_id: usuarioId,
-            carpeta_id: carpetaId || null,
-            gridfs_id: file.id,
-            tamano: file.size,
-            tipo_archivo: file.mimetype,
-        });
-
-        await nuevoArchivo.save();
-        usuario.espacioUtilizado += file.size;
-        await usuario.save();
-
-        await HistorialActividad.create({
-            usuario_id: usuarioId,
-            recurso_id: nuevoArchivo._id,
-            tipo_recurso: 'archivo',
-            accion: 'creacion',
-            detalle: `Archivo ${nuevoArchivo.nombre} subido a la carpeta ${carpetaId || 'raíz'}`,
-        });
-        return nuevoArchivo;
     }
 
 
 
     async descargarArchivo(archivoId, usuarioId) {
-        const archivo = await Archivo.findByOne({ _id: archivoId, estado: 'activo' });
+        const archivo = await Archivo.findOne({ _id: archivoId, estado: 'activo' });
         if (!archivo) {
             throw new Error('ARCHIVO_NO_ENCONTRADO');
         }
@@ -100,18 +106,29 @@ class ArchivoService {
             throw new Error('NOMBRE_DUPLICADO');
         }
 
-        archivo.nombre = nuevoNombre;
-        await archivo.save();
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            archivo.nombre = nuevoNombre;
+            await archivo.save({ session });
+            
+            await HistorialActividad.create([{
+                usuario_id: usuarioId, 
+                recurso_id: archivo._id, 
+                tipo_recurso: 'archivo',
+                accion: 'edicion', 
+                detalles: `Renombrado a ${nuevoNombre}`
+            }], { session });
 
-        await HistorialActividad.create({
-            usuario_id: usuarioId, 
-            recurso_id: archivo._id, 
-            tipo_recurso: 'archivo',
-            accion: 'edicion', 
-            detalles: `Renombrado a ${nuevoNombre}`
-        });
+            await session.commitTransaction();
+            session.endSession();
 
-        return archivo;
+            return archivo;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
     }
 
     async mover(idArchivo, nuevaCarpetaId, usuarioId) {
@@ -124,7 +141,7 @@ class ArchivoService {
         }
 
         const archivoExistente = await Archivo.findOne({
-            nombre: archivoMover.nombre,
+            nombre: archivo.nombre,
             carpeta_id: nuevaCarpetaId || null,
             propietario_id: usuarioId,
             estado: 'activo'
@@ -134,15 +151,25 @@ class ArchivoService {
             throw new Error('NOMBRE_DUPLICADO_DESTINO');
         }
 
-        archivo.carpeta_id = nuevaCarpetaId || null;
-        await archivo.save();
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            archivo.carpeta_id = nuevaCarpetaId || null;
+            await archivo.save({ session });
 
-        await HistorialActividad.create({
-            usuario_id: usuarioId, recurso_id: archivo._id, tipo_recurso: 'archivo',
-            accion: 'edicion', detalles: 'Archivo movido'
-        });
+            await HistorialActividad.create([{
+                usuario_id: usuarioId, recurso_id: archivo._id, tipo_recurso: 'archivo',
+                accion: 'edicion', detalles: 'Archivo movido'
+            }], { session });
+            await session.commitTransaction();
+            session.endSession();
 
-        return archivo;
+            return archivo;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
+        }
     }
 }
 

@@ -12,6 +12,11 @@ interface RespuestaContenido {
   };
 }
 
+export interface RutaBreadcrumb {
+  id: string | null;
+  nombre: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -23,6 +28,7 @@ export class CarpetaService {
   archivos = signal<Archivo[]>([]);
   cargando = signal<boolean>(false);
   carpetaActualId = signal<string | null>(null);
+  rutaActual = signal<RutaBreadcrumb[]>([{ id: null, nombre: 'Mi unidad' }]);
 
   crearCarpeta(nombre: string, carpeta_padre_id: string | null) {
     return this.http.post<{mensaje: string, carpeta: Carpeta}>(this.apiUrl, { nombre, carpeta_padre_id}).pipe(
@@ -37,6 +43,7 @@ export class CarpetaService {
   obtenerRaiz() {
     this.cargando.set(true);
     this.carpetaActualId.set(null); // Estamos en la raíz
+    this.rutaActual.set([{ id: null, nombre: 'Mi unidad' }]);
     
     return this.http.get<RespuestaContenido>(this.apiUrl).pipe(
       tap({
@@ -50,10 +57,15 @@ export class CarpetaService {
     );
   }
 
-  obtenerContenidoCarpeta(id: string) {
+  obtenerContenidoCarpeta(id: string, nombre: string, indexBreadcrumb?: number) {
     this.cargando.set(true);
     this.carpetaActualId.set(id);
 
+    if(indexBreadcrumb !== undefined){
+      this.rutaActual.update(ruta => ruta.slice(0, indexBreadcrumb + 1))
+    } else {
+      this.rutaActual.update(ruta => [...ruta, { id, nombre }]);
+    }
     return this.http.get<RespuestaContenido>(`${this.apiUrl}${id}`).pipe(
       tap({
         next: (res) => {
@@ -64,5 +76,17 @@ export class CarpetaService {
         error: () => this.cargando.set(false)
       })
     );
+  }
+
+  renombrarCarpeta(id: string, nuevoNombre: string) {
+    return this.http.put(`${this.apiUrl}/${id}/renombrar`, { nuevoNombre });
+  }
+
+  moverCarpeta(id: string, nuevaCarpetaId: string | null) {
+    return this.http.put(`${this.apiUrl}/${id}/mover`, { nuevaCarpetaId });
+  }
+
+  obtenerTodasLasCarpetas() {
+    return this.http.get<{mensaje: string, carpetas: any[]}>(`${this.apiUrl}todas`); 
   }
 }

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { CarpetaService } from './carpeta.service';
 import { environment } from '../../../environments/environment';
@@ -20,12 +20,30 @@ export class ArchivoService {
       formData.append('carpeta_id', carpetaId);
     }
 
-    return this.http.post<{mensaje: string, archivo: Archivo}>(`${this.apiUrl}/upload`, formData).pipe(
+    const headers = new HttpHeaders({
+      'x-archivo-nombre': archivo.name,
+      'x-archivo-tamano': archivo.size.toString(),
+      'x-carpeta-id': carpetaId || ''
+    });
+
+    return this.http.post<{mensaje: string, archivo: Archivo}>(`${this.apiUrl}/upload`, formData, { headers }).pipe(
       tap({
         next: (res) => {
           this.carpetaService.archivos.update(archivosActuales => [...archivosActuales, res.archivo]);
         }
       })
     );
+  }
+
+  descargarArchivo(id: string) {
+    return this.http.get(`${this.apiUrl}/descargar/${id}`, { responseType: 'blob' });
+  }
+
+  renombrarArchivo(id: string, nuevoNombre: string) {
+    return this.http.put(`${this.apiUrl}/${id}/renombrar`, { nuevoNombre });
+  }
+
+  moverArchivo(id: string, nuevaCarpetaId: string | null) {
+    return this.http.put(`${this.apiUrl}/${id}/mover`, { nuevaCarpetaId });
   }
 }

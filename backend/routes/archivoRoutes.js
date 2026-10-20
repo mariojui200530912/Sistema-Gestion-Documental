@@ -3,8 +3,9 @@ const router = express.Router();
 const archivoController = require('../controllers/archivoController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const uploadMiddleware = require('../middlewares/uploadMiddleware');
+const validarSubidaMiddleware = require('../middlewares/validarSubidaMiddleware');
 
-router.post('/upload', authMiddleware, (req, res, next) => {
+router.post('/upload', authMiddleware, validarSubidaMiddleware, (req, res, next) => {
     const uploadSingle = uploadMiddleware.single('archivo');
     uploadSingle(req, res, function (err) {
         if (err) {

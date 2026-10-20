@@ -21,6 +21,16 @@ exports.obtenerCarpeta = async (req, res) => {
     }
 };
 
+exports.obtenerTodasLasCarpetas = async (req, res) => {
+    try {
+        const carpetas = await carpetaService.obtenerTodas(req.usuario.id);
+        res.status(200).json({ carpetas });
+    } catch (error) {
+        console.error('Error al obtener todas las carpetas:', error);
+        res.status(500).json({ mensaje: 'Error al cargar el listado de carpetas' });
+    }
+};
+
 exports.crearCarpeta = async (req, res) => {
     try {
         const nuevaCarpeta = await carpetaService.crear(req.body.nombre, req.body.carpeta_padre_id, req.usuario.id);
