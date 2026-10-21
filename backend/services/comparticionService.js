@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Archivo = require('../models/Archivo');
 const Carpeta = require('../models/Carpeta');
 const HistorialActividad = require('../models/HistorialActividad');
@@ -5,45 +6,65 @@ const Usuario = require('../models/Usuario');
 
 class ComparticionService {
     // Metodo privado para compartir permisos en cascada
-    async _compartirRecursivo(idCarpeta, beneficiarioId, nivelPermiso) {
-        const archivos = await Archivo.find({ carpeta_id: idCarpeta, estado: 'activo' });
-        for (const archivo of archivos) {
-            const indice = archivo.accesos.findIndex(a => a.usuario_id.equals(beneficiarioId));
-            if (indice >= 0) {
-                archivo.accesos[indice].nivel_permiso = nivelPermiso;
-            } else {
-                archivo.accesos.push({ usuario_id: beneficiarioId, nivel_permiso: nivelPermiso });
-            }
-            await archivo.save();
-        }
+    async _compartirRecursivo(idCarpeta, beneficiarioId, nivelPermiso, session) {
+        // Agregar el acceso a los archivos que NO lo tienen
+        await Archivo.updateMany(
+            { carpeta_id: idCarpeta, 'accesos.usuario_id': { $ne: beneficiarioId }, estado: 'activo' },
+            { $push: { accesos: { usuario_id: beneficiarioId, nivel_permiso: nivelPermiso } } },
+            { session }
+        );
 
-        const subcarpetas = await Carpeta.find({ carpeta_padre_id: idCarpeta, estado: 'activo' });
+        // Actualizar el nivel de permiso a los archivos que YA lo tienen
+        await Archivo.updateMany(
+            { carpeta_id: idCarpeta, 'accesos.usuario_id': beneficiarioId, estado: 'activo' },
+            { $set: { 'accesos.$.nivel_permiso': nivelPermiso } },
+            { session }
+        );
+
+        // Buscar subcarpetas 
+        const subcarpetas = await Carpeta.find({ carpeta_padre_id: idCarpeta, estado: 'activo' }).session(session);
+        
+        // Agregar el acceso a las subcarpetas que NO lo tienen
+        await Carpeta.updateMany(
+            { carpeta_padre_id: idCarpeta, 'accesos.usuario_id': { $ne: beneficiarioId }, estado: 'activo' },
+            { $push: { accesos: { usuario_id: beneficiarioId, nivel_permiso: nivelPermiso } } },
+            { session }
+        );
+
+        // Actualizar el nivel de permiso a las subcarpetas que YA lo tienen
+        await Carpeta.updateMany(
+            { carpeta_padre_id: idCarpeta, 'accesos.usuario_id': beneficiarioId, estado: 'activo' },
+            { $set: { 'accesos.$.nivel_permiso': nivelPermiso } },
+            { session }
+        );
+
+        // Continuar la recursividad
         for (const subcarpeta of subcarpetas) {
-            const indice = subcarpeta.accesos.findIndex(a => a.usuario_id.equals(beneficiarioId));
-            if (indice >= 0) {
-                subcarpeta.accesos[indice].nivel_permiso = nivelPermiso;
-            } else {
-                subcarpeta.accesos.push({ usuario_id: beneficiarioId, nivel_permiso: nivelPermiso });
-            }
-            await subcarpeta.save();
-            await this._compartirRecursivo(subcarpeta._id, beneficiarioId, nivelPermiso);
+            await this._compartirRecursivo(subcarpeta._id, beneficiarioId, nivelPermiso, session);
         }
     }
 
     // Metodo privado para quitar permisos en cascada
-    async _revocarRecursivo(idCarpeta, idUsuarioRevocar) {
-        const archivos = await Archivo.find({ carpeta_id: idCarpeta });
-        for (const archivo of archivos) {
-            archivo.accesos = archivo.accesos.filter(a => a.usuario_id.toString() !== idUsuarioRevocar.toString());
-            await archivo.save();
-        }
+    async _revocarRecursivo(idCarpeta, idUsuarioRevocar, session) {
+        // Elimina el acceso de todos los archivos de esta carpeta en una sola consulta
+        await Archivo.updateMany(
+            { carpeta_id: idCarpeta },
+            { $pull: { accesos: { usuario_id: idUsuarioRevocar } } },
+            { session }
+        );
 
-        const subcarpetas = await Carpeta.find({ carpeta_padre_id: idCarpeta });
+        const subcarpetas = await Carpeta.find({ carpeta_padre_id: idCarpeta }).session(session);
+        
+        // Elimina el acceso de todas las subcarpetas directas en una sola consulta
+        await Carpeta.updateMany(
+            { carpeta_padre_id: idCarpeta },
+            { $pull: { accesos: { usuario_id: idUsuarioRevocar } } },
+            { session }
+        );
+
+        // Continuar descendiendo
         for (const subcarpeta of subcarpetas) {
-            subcarpeta.accesos = subcarpeta.accesos.filter(a => a.usuario_id.toString() !== idUsuarioRevocar.toString());
-            await subcarpeta.save();
-            
-            await this._revocarRecursivo(subcarpeta._id, idUsuarioRevocar);
+            await this._revocarRecursivo(subcarpeta._id, idUsuarioRevocar, session);
         }
     }
 
@@ -60,30 +81,42 @@ class ComparticionService {
 
         if(!recurso) throw new Error('RECURSO_NO_ENCONTRADO');
 
-        const indiceAcceso = recurso.accesos.findIndex(acceso => acceso.usuario_id.equals(beneficiario._id));
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        if (indiceAcceso >= 0) {
-            recurso.accesos[indiceAcceso].nivel_permiso = nivelPermiso;
-        } else {
-            recurso.accesos.push({ usuario_id: beneficiario._id, nivel_permiso: nivelPermiso });
+        try {
+            const indiceAcceso = recurso.accesos.findIndex(acceso => acceso.usuario_id.equals(beneficiario._id));
+
+            if (indiceAcceso >= 0) {
+                recurso.accesos[indiceAcceso].nivel_permiso = nivelPermiso;
+            } else {
+                recurso.accesos.push({ usuario_id: beneficiario._id, nivel_permiso: nivelPermiso });
+            }
+
+            await recurso.save({ session });
+
+            if (tipoRecurso === 'carpeta') {
+                await this._compartirRecursivo(recurso._id, beneficiario._id, nivelPermiso, session);
+            }
+
+            await HistorialActividad.create([{
+                usuario_id: propietarioId,
+                recurso_id: recurso._id,
+                tipo_recurso: tipoRecurso,
+                accion: 'compartir',
+                detalles: `Compartido con ${correoBeneficiario} (${nivelPermiso})`
+            }], { session });
+
+            await session.commitTransaction();
+            session.endSession();
+
+            return recurso.accesos;
+
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
         }
-
-        await recurso.save();
-
-        // Si es una carpeta, compartimos recursivamente
-        if (tipoRecurso === 'carpeta') {
-            await this._compartirRecursivo(recurso._id, beneficiario._id, nivelPermiso);
-        }
-
-        await HistorialActividad.create({
-            usuario_id: propietarioId,
-            recurso_id: recurso._id,
-            tipo_recurso: tipoRecurso,
-            accion: 'compartir',
-            detalles: `Compartido con ${correoBeneficiario} (${nivelPermiso})`
-        });
-
-        return recurso.accesos;
     }
 
     async revocar(idRecurso, tipoRecurso, idUsuarioRevocar, propietarioId) {
@@ -99,16 +132,27 @@ class ComparticionService {
             throw new Error('ACCESO_INEXISTENTE');
         }
 
-        await recurso.save();
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        // Si el recurso es una carpeta, revocar también en cascada
-        if (tipoRecurso === 'carpeta') {
-            await this._revocarRecursivo(recurso._id, idUsuarioRevocar);
+        try {
+            await recurso.save({ session });
+
+            if (tipoRecurso === 'carpeta') {
+                await this._revocarRecursivo(recurso._id, idUsuarioRevocar, session);
+            }
+
+            await session.commitTransaction();
+            session.endSession();
+
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            throw error;
         }
     }
 
     async obtenerCompartidosConmigo(miId) {
-        // Buscamos donde el usuario exista dentro del arreglo embebido 'accesos'
         const archivos = await Archivo.find({ 'accesos.usuario_id': miId, estado: 'activo' })
                                       .populate('propietario_id', 'nombres apellidos correo');
                                       
