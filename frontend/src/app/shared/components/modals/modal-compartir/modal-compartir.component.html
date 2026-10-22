@@ -1,64 +1,133 @@
-<div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
     
-    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+    <!-- CABECERA -->
+    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 flex-shrink-0">
       <h3 class="text-lg font-bold text-gray-800 flex items-center">
-        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-        Compartir {{ tipoItem() === 'carpeta' ? 'Carpeta' : 'Archivo' }}
+        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+        </svg>
+        Compartir {{ tipo() === 'carpeta' ? 'Carpeta' : 'Archivo' }}
       </h3>
-      <button (click)="onCerrar.emit()" class="text-gray-400 hover:text-gray-600 transition-colors">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      <button (click)="onCerrar.emit()" class="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
       </button>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="enviar()">
-      <div class="p-6 space-y-4">
-        
-        <div class="flex items-center p-3 bg-blue-50/50 rounded-lg border border-blue-100 mb-4">
-          <svg class="w-8 h-8 text-blue-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-            @if (tipoItem() === 'carpeta') {
-              <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
-            } @else {
-              <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
-            }
+    <!-- CUERPO DESLIZABLE -->
+    <div class="px-6 py-6 overflow-y-auto flex-1">
+      
+      <!-- Info del Recurso -->
+      <div class="flex items-center p-3 mb-6 bg-blue-50 border border-blue-100 rounded-lg">
+        @if (tipo() === 'carpeta') {
+          <svg class="w-8 h-8 text-blue-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path>
           </svg>
-          <span class="text-sm font-medium text-gray-700 truncate">{{ itemSeleccionado()?.nombre }}</span>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Correo electrónico del usuario</label>
-          <input type="email" formControlName="correo" placeholder="ejemplo@correo.com" autofocus
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
-          @if (form.get('correo')?.touched && form.get('correo')?.invalid) {
-            <span class="text-red-500 text-xs mt-1 block">Ingresa un correo válido.</span>
-          }
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Nivel de permiso</label>
-          <select formControlName="permiso" class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
-            <option value="lectura">👀 Lector (Solo puede ver y descargar)</option>
-            <option value="comentar">💬 Comentador (Puede ver y añadir notas)</option>
-            <option value="edicion">✏️ Editor (Puede modificar y eliminar)</option>
-          </select>
-        </div>
-
+        } @else {
+          <svg class="w-8 h-8 text-gray-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+          </svg>
+        }
+        <span class="font-medium text-gray-700 truncate">{{ item().nombre }}</span>
       </div>
 
-      <div class="px-6 py-4 bg-gray-50 flex justify-end space-x-3 border-t border-gray-100">
-        <button type="button" (click)="onCerrar.emit()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-          Cancelar
-        </button>
-        <button type="submit" [disabled]="form.invalid || compartiendo()"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors flex items-center">
-          @if (compartiendo()) {
-            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            Compartiendo...
+      <!-- Formulario para agregar -->
+      <form [formGroup]="compartirForm" (ngSubmit)="compartir()" class="mb-6">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Correo electrónico del usuario</label>
+            <input 
+              type="email" 
+              formControlName="correo"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              placeholder="ejemplo@empresa.com">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nivel de permiso</label>
+            <select 
+              formControlName="permiso"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              <option value="lectura">👀 Lector (Solo puede ver y descargar)</option>
+              <option value="edicion">✏️ Editor (Puede modificar y organizar)</option>
+            </select>
+          </div>
+          <button 
+            type="submit" 
+            [disabled]="compartirForm.invalid || compartiendo()"
+            class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center">
+            @if (compartiendo()) {
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Compartiendo...
+            } @else {
+              Compartir Recurso
+            }
+          </button>
+        </div>
+      </form>
+
+      <!-- Lista de Personas con Acceso -->
+      <div>
+        <h4 class="text-sm font-bold text-gray-800 mb-3 border-b pb-2">Personas con acceso</h4>
+        
+        @if (cargandoAccesos()) {
+          <div class="flex justify-center py-4">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          </div>
+        } @else {
+          @if (listaAccesos().length === 0) {
+            <div class="text-center py-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50 text-gray-500 text-sm font-medium">
+              Solo tú tienes acceso a este recurso.
+            </div>
           } @else {
-            Compartir
+            <ul class="space-y-3">
+              @for (acceso of listaAccesos(); track acceso.usuario_id._id) {
+                <li class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div class="flex items-center overflow-hidden mr-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                      {{ acceso.usuario_id.nombres?.charAt(0) || 'U' }}
+                    </div>
+                    <div class="ml-3 truncate">
+                      <p class="text-sm font-medium text-gray-800 truncate">{{ acceso.usuario_id.nombres }} {{ acceso.usuario_id.apellidos }}</p>
+                      <p class="text-xs text-gray-500 truncate">{{ acceso.usuario_id.correo }}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center flex-shrink-0">
+                    <span class="px-2 py-1 text-xs font-medium rounded-full mr-3"
+                          [ngClass]="acceso.nivel_permiso === 'edicion' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'">
+                      {{ acceso.nivel_permiso === 'edicion' ? 'Editor' : 'Lector' }}
+                    </span>
+                    <button 
+                      (click)="revocar(acceso.usuario_id._id)"
+                      class="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50 transition-colors"
+                      title="Revocar acceso">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+              }
+            </ul>
           }
-        </button>
+        }
       </div>
-    </form>
+
+    </div>
+
+    <!-- PIE -->
+    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end flex-shrink-0">
+      <button 
+        type="button" 
+        (click)="onCerrar.emit()" 
+        class="px-5 py-2 text-sm font-medium text-white bg-gray-800 border border-transparent rounded-lg hover:bg-gray-900 focus:outline-none transition-colors shadow-sm">
+        Listo
+      </button>
+    </div>
+    
   </div>
 </div>

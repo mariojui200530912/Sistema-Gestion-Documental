@@ -18,10 +18,15 @@ export class AuthService {
   login(correo: string, contrasena: string){
     return this.http.post<any>(`${this.apiUrl}/usuarios/login`, {correo, contrasena}).pipe(
       tap(respuesta => {
-        if(respuesta.token){
+        if (respuesta.token && respuesta.usuario) {
+          const usuarioNormalizado: Usuario = {
+            ...respuesta.usuario,
+            id: respuesta.usuario.id || respuesta.usuario._id
+          };
+          
           localStorage.setItem('token', respuesta.token);
-          localStorage.setItem('usuario', JSON.stringify(respuesta.usuario));
-          this.usuarioActual.set(respuesta.usuario);
+          localStorage.setItem('usuario', JSON.stringify(usuarioNormalizado));
+          this.usuarioActual.set(usuarioNormalizado);
         }
       })
     );
@@ -40,6 +45,31 @@ export class AuthService {
 
   private obtenerUsuarioDeStorage(): Usuario | null {
     const usuarioStr = localStorage.getItem('usuario');
-    return usuarioStr ? JSON.parse(usuarioStr) : null;
+    if (!usuarioStr) return null;
+    
+    const rawUser = JSON.parse(usuarioStr);
+    return {
+      ...rawUser,
+      id: rawUser.id || rawUser._id
+    };
+  }
+
+  refrescarUsuarioActual() {
+    const user = this.usuarioActual();
+    const id = user?.id;
+    if (!id) return;
+
+    this.http.get<any>(`${this.apiUrl}/usuarios/${id}`).subscribe({
+      next: (res) => {
+        if (res.usuario) {
+          const actualizado: Usuario = {
+            ...res.usuario,
+            id: res.usuario.id || res.usuario._id
+          };
+          localStorage.setItem('usuario', JSON.stringify(actualizado));
+          this.usuarioActual.set(actualizado);
+        }
+      }
+    });
   }
 }

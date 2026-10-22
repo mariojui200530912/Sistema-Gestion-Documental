@@ -23,7 +23,7 @@
               [modoPapelera]="true"
               (onToggleMenu)="toggleMenu($event, carpeta._id)"
               (onRestaurar)="restaurar($event, carpeta._id, 'carpeta')"
-              (onEliminarDefinitivo)="eliminarDefinitivo($event, carpeta._id, 'carpeta', carpeta.nombre)">
+              (onEliminarDefinitivo)="abrirModalEliminar($event, carpeta, 'carpeta')">
             </app-carpeta-card>
           }
         </div>
@@ -40,7 +40,7 @@
               [modoPapelera]="true"
               (onToggleMenu)="toggleMenu($event, archivo._id)"
               (onRestaurar)="restaurar($event, archivo._id, 'archivo')"
-              (onEliminarDefinitivo)="eliminarDefinitivo($event, archivo._id, 'archivo', archivo.nombre)">
+              (onEliminarDefinitivo)="abrirModalEliminar($event, archivo, 'carpeta')">
             </app-archivo-card>
           }
         </div>
@@ -58,13 +58,11 @@
 </div>
 
 <!-- MODAL DE CONFIRMACION -->
-@if (mostrarModalConfirmacion()) {
-  <app-modal-confirmacion
-    titulo="Eliminar permanentemente"
-    [mensaje]="'¿Estás seguro de que deseas eliminar definitivamente \'' + itemAEliminar()?.nombre + '\'? Esta acción no se puede deshacer y liberará espacio en tu almacenamiento.'"
-    textoBoton="Eliminar para siempre"
-    [esPeligroso]="true"
-    (onCancelar)="mostrarModalConfirmacion.set(false)"
-    (onConfirmar)="ejecutarEliminacionDefinitiva()">
-  </app-modal-confirmacion>
+@if (mostrarModalEliminar()) {
+  <app-modal-eliminar-definitivo
+    [item]="itemSeleccionado()"
+    [tipo]="tipoItemSeleccionado()!"
+    (onCerrar)="mostrarModalEliminar.set(false)"
+    (onGuardado)="cargarPapelera()">
+  </app-modal-eliminar-definitivo>
 }

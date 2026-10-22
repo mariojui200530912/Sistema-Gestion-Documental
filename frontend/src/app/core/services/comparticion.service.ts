@@ -11,20 +11,24 @@ export class ComparticionService {
 
   compartirRecurso(idRecurso: string, tipoRecurso: 'archivo' | 'carpeta', correoBeneficiario: string, nivelPermiso: string) {
     return this.http.post(`${this.apiUrl}`, {
-      idRecurso,
-      tipoRecurso,
-      correoBeneficiario,
-      nivelPermiso
+      id_recurso: idRecurso,
+      tipo_recurso: tipoRecurso,
+      correo_beneficiario: correoBeneficiario,
+      nivel_permiso: nivelPermiso
     });
   }
 
   revocarPermiso(idRecurso: string, tipoRecurso: 'archivo' | 'carpeta', idUsuarioRevocar: string) {
-    return this.http.delete(`${this.apiUrl}/revocar`, {
+    return this.http.delete(`${this.apiUrl}revocar`, {
       body: { idRecurso, tipoRecurso, idUsuarioRevocar }
     });
   }
 
   obtenerCompartidosConmigo() {
-    return this.http.get<{ carpetas: any[], archivos: any[] }>(`${this.apiUrl}/conmigo`);
+    return this.http.get<{ carpetas: any[], archivos: any[] }>(`${this.apiUrl}conmigo`);
+  }
+
+  obtenerAccesos(idRecurso: string, tipoRecurso: 'archivo' | 'carpeta') {
+    return this.http.get<{ mensaje: string, accesos: any[] }>(`${this.apiUrl}accesos/${tipoRecurso}/${idRecurso}`);
   }
 }

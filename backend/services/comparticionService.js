@@ -161,6 +161,19 @@ class ComparticionService {
 
         return { carpetas, archivos };
     }
+
+    async obtenerAccesos(idRecurso, tipoRecurso, propietarioId) {
+        if (!['carpeta', 'archivo'].includes(tipoRecurso)) throw new Error('TIPO_INVALIDO');
+
+        const Modelo = tipoRecurso === 'carpeta' ? Carpeta : Archivo;
+        
+        const recurso = await Modelo.findOne({ _id: idRecurso, propietario_id: propietarioId })
+                                    .populate('accesos.usuario_id', 'nombres apellidos correo');
+
+        if (!recurso) throw new Error('RECURSO_NO_ENCONTRADO');
+
+        return recurso.accesos;
+    }
 }
 
 module.exports = new ComparticionService();

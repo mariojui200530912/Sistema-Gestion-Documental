@@ -9,6 +9,9 @@ exports.subirArchivo = async (req, res) => {
         
         res.status(201).json({ mensaje: 'Archivo subido exitosamente', archivo: archivoSubido });
     } catch (error) {
+        if (error.message === 'CARPETA_DESTINO_INVALIDA_O_SIN_PERMISO'){
+            return res.status(400).json({ mensaje: 'Carpeta no encontrada o no tiene los permisos'});
+        }
         if (error.message === 'NOMBRE_DUPLICADO') {
             return res.status(400).json({ mensaje: 'Ya existe un archivo con ese nombre en esta carpeta' });
         }

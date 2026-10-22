@@ -32,7 +32,7 @@ exports.eliminarDefinitivo = async (req, res) => {
         
         res.json({ mensaje: `${tipo === 'archivo' ? 'Archivo eliminado definitivamente y espacio liberado' : 'Carpeta eliminada definitivamente'}` });
     } catch (error) {
-        if (error.message === 'ELEMENTO_NO_ENCONTRADO') return res.status(404).json({ mensaje: 'Elemento no encontrado en la papelera' });
+        if (error.message === 'ELEMENTO_NO_ENCONTRADO') return res.status(404).json({ mensaje: 'Elemento no encontrado en la papelera o sin permisos' });
         if (error.message === 'TIPO_INVALIDO') return res.status(400).json({ mensaje: 'Tipo de recurso no válido' });
         
         console.error(error);

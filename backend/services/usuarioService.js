@@ -83,13 +83,20 @@ class UsuarioService {
             throw new Error('USUARIO_NO_ENCONTRADO');
         }
 
-        if(usuarioAuntenticado.rol !== 'admin' && usuarioAuntenticado.id !== idDestino) {
+        const esAdministrador = usuarioAuntenticado.rol === 'administrador';
+        if (!esAdministrador && usuarioAuntenticado.id !== idDestino) {
             throw new Error('PERMISO_DENEGADO');
         }
 
         if (nombres) usuario.nombres = nombres;
         if (apellidos) usuario.apellidos = apellidos;
         if (correo) usuario.correo = correo;
+        
+        if (esAdministrador) {
+            if (rol) usuario.rol = rol;
+            if (espacioAsignado !== undefined) usuario.espacioAsignado = espacioAsignado;
+            if (estado) usuario.estado = estado;
+        }
         
         if (password) {
             const salt = await bcrypt.genSalt(10);
@@ -104,8 +111,6 @@ class UsuarioService {
         return usuarioActualizado;
     }
 
-
-
     async desactivarUsuario(idUsuario) {
         const usuario = await Usuario.findByIdAndUpdate(
             idUsuario,
@@ -116,24 +121,6 @@ class UsuarioService {
         if (!usuario) {
             throw new Error('USUARIO_NO_ENCONTRADO');
         }
-
-        await Archivo.updateMany(
-            { 'accesos.usuario_id': idUsuario },
-            { $pull: { accesos: { usuario_id: idUsuario } } }
-        );
-        await Carpeta.updateMany(
-            { 'accesos.usuario_id': idUsuario },
-            { $pull: { accesos: { usuario_id: idUsuario } } }
-        );
-
-        await Archivo.updateMany(
-            { propietario_id: idUsuario, estado: 'activo' },
-            { estado: 'papelera' }
-        );
-        await Carpeta.updateMany(
-            { propietario_id: idUsuario, estado: 'activo' },
-            { estado: 'papelera' }
-        );
 
         return usuario;
     }

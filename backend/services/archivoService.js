@@ -6,6 +6,18 @@ const HistorialActividad = require('../models/HistorialActividad');
 
 class ArchivoService {
     async crearArchivo(file, carpetaId, usuarioId) {
+        if (carpetaId) {
+            const carpetaDestino = await Carpeta.findOne({
+                _id: carpetaId,
+                estado: 'activo',
+                $or: [
+                    { propietario_id: usuarioId },
+                    { accesos: { $elemMatch: { usuario_id: usuarioId, nivel_permiso: 'edicion' } } }
+                ]
+            });
+            if (!carpetaDestino) throw new Error('CARPETA_DESTINO_INVALIDA_O_SIN_PERMISO');
+        }
+
         const archivoExistente = await Archivo.findOne({
             nombre: file.originalname,
             carpeta_id: carpetaId || null,
@@ -53,9 +65,15 @@ class ArchivoService {
     }
 
 
-
     async descargarArchivo(archivoId, usuarioId) {
-        const archivo = await Archivo.findOne({ _id: archivoId, estado: 'activo' });
+        const archivo = await Archivo.findOne({
+            _id: archivoId,
+            estado: 'activo',
+            $or: [
+                { propietario_id: usuarioId },
+                { 'accesos.usuario_id': usuarioId } 
+            ]
+        });
         if (!archivo) {
             throw new Error('ARCHIVO_NO_ENCONTRADO');
         }
@@ -82,7 +100,14 @@ class ArchivoService {
     }
 
     async renombrar(idArchivo, nuevoNombre, usuarioId) {
-        const archivo = await Archivo.findOne({ _id: idArchivo, estado: 'activo' });
+        const archivo = await Archivo.findOne({
+            _id: idArchivo,
+            estado: 'activo',
+            $or: [
+                { propietario_id: usuarioId },
+                { accesos: { $elemMatch: { usuario_id: usuarioId, nivel_permiso: 'edicion' } } }
+            ]
+        });
         if (!archivo) throw new Error('ARCHIVO_NO_ENCONTRADO');
         if (archivo.nombre === nuevoNombre) return archivo;
 
@@ -132,7 +157,14 @@ class ArchivoService {
     }
 
     async mover(idArchivo, nuevaCarpetaId, usuarioId) {
-        const archivo = await Archivo.findOne({ _id: idArchivo, propietario_id: usuarioId, estado: 'activo' });
+        const archivo = await Archivo.findOne({
+            _id: idArchivo,
+            estado: 'activo',
+            $or: [
+                { propietario_id: usuarioId },
+                { accesos: { $elemMatch: { usuario_id: usuarioId, nivel_permiso: 'edicion' } } }
+            ]
+        });
         if (!archivo) throw new Error('ARCHIVO_NO_ENCONTRADO');
 
         if (nuevaCarpetaId) {

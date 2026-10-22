@@ -1,0 +1,11 @@
+<app-explorador-archivos
+  [carpetas]="carpetas()"
+  [archivos]="archivos()"
+  [cargando]="cargando()"
+  [rutaActual]="rutaActual()"
+  [esContextoCompartido]="true"
+  (onAbrirCarpeta)="abrirCarpeta($event)"
+  (onNavegarBreadcrumb)="navegarBreadcrumb($event.index, $event.id)"
+  (onDescargarArchivo)="descargarArchivo($event)"
+  (onRecargarVista)="cargarCompartidos()">
+</app-explorador-archivos>

@@ -4,11 +4,11 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { CommonModule } from '@angular/common';
 import { CarpetaCardComponent } from '../../../../shared/components/carpeta-card/carpeta-card.component';
 import { ArchivoCardComponent } from '../../../../shared/components/archivo-card/archivo-card.component';
-import { ModalConfirmacionComponent } from '../../../../shared/components/modals/modal-confirmacion/modal-confirmacion.component';
+import { ModalEliminarDefinitivoComponent } from '../../../../shared/components/modals/modal-eliminar/modal-eliminar-definitivo.component';
 
 @Component({
   selector: 'app-papelera',
-  imports: [CommonModule, CarpetaCardComponent, ArchivoCardComponent, ModalConfirmacionComponent],
+  imports: [CommonModule, CarpetaCardComponent, ArchivoCardComponent, ModalEliminarDefinitivoComponent],
   templateUrl: './papelera.component.html',
   styleUrl: './papelera.component.css',
 })
@@ -19,9 +19,13 @@ export class PapeleraComponent implements OnInit{
   carpetas = signal<any[]>([]);
   archivos = signal<any[]>([]);
   cargando = signal<boolean>(true);
+  
   menuActivoId = signal<string | null>(null);
-  mostrarModalConfirmacion = signal<boolean>(false);
-  itemAEliminar = signal<{ id: string, tipo: 'archivo' | 'carpeta', nombre: string } | null>(null);
+
+  // Estado del Modal Inteligente
+  mostrarModalEliminar = signal<boolean>(false);
+  itemSeleccionado = signal<any>(null);
+  tipoItemSeleccionado = signal<'carpeta' | 'archivo' | null>(null);
 
   ngOnInit() {
     this.cargarPapelera();
@@ -64,28 +68,11 @@ export class PapeleraComponent implements OnInit{
     });
   }
 
-  eliminarDefinitivo(event: Event, id: string, tipo: 'archivo' | 'carpeta', nombre: string) {
+  abrirModalEliminar(event: Event, item: any, tipo: 'archivo' | 'carpeta') {
     event.stopPropagation();
     this.cerrarMenus();
-    this.itemAEliminar.set({ id, tipo, nombre });
-    this.mostrarModalConfirmacion.set(true); // Abrimos el modal elegante
-  }
-
-  ejecutarEliminacionDefinitiva() {
-    const item = this.itemAEliminar();
-    if (!item) return;
-
-    this.papeleraService.eliminarDefinitivo(item.id, item.tipo).subscribe({
-      next: () => {
-        this.toastService.mostrarExito('Elemento eliminado definitivamente');
-        this.mostrarModalConfirmacion.set(false);
-        this.itemAEliminar.set(null);
-        this.cargarPapelera();
-      },
-      error: (err) => {
-        this.toastService.mostrarError(err.error?.mensaje || 'Error al eliminar');
-        this.mostrarModalConfirmacion.set(false);
-      }
-    });
+    this.itemSeleccionado.set(item);
+    this.tipoItemSeleccionado.set(tipo);
+    this.mostrarModalEliminar.set(true);
   }
 }

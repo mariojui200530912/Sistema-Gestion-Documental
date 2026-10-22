@@ -44,9 +44,28 @@ exports.revocarPermiso = async (req, res) => {
 exports.obtenerCompartidosConmigo = async (req, res) => {
     try {
         const contenido = await comparticionService.obtenerCompartidosConmigo(req.usuario.id);
-        res.json({ mensaje: 'Recursos compartidos obtenidos', contenido });
+        res.json({ 
+            mensaje: 'Recursos compartidos obtenidos', 
+            carpetas: contenido.carpetas,
+            archivos: contenido.archivos
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ mensaje: 'Error al obtener recursos compartidos' });
+    }
+};
+
+exports.obtenerAccesos = async (req, res) => {
+    try {
+        const { id, tipo } = req.params;
+        const accesos = await comparticionService.obtenerAccesos(id, tipo, req.usuario.id);
+        
+        res.json({ mensaje: 'Accesos obtenidos correctamente', accesos });
+    } catch (error) {
+        if (error.message === 'RECURSO_NO_ENCONTRADO') return res.status(404).json({ mensaje: 'Recurso no encontrado o sin permisos' });
+        if (error.message === 'TIPO_INVALIDO') return res.status(400).json({ mensaje: 'Tipo de recurso no válido' });
+        
+        console.error(error);
+        res.status(500).json({ mensaje: 'Error al obtener los accesos del recurso' });
     }
 };

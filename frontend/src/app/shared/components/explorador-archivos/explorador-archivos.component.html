@@ -1,0 +1,216 @@
+<div class="h-full w-full flex flex-col p-8" (click)="cerrarMenus()">
+  <!-- CABECERA -->
+  <div class="flex flex-col md:flex-row md:items-start justify-between mb-6 gap-4 flex-shrink-0">
+    <div>
+      <!-- Título Principal Dinámico -->
+      <h2 class="text-2xl font-bold text-gray-800 flex items-center mb-1.5">
+        @if (esContextoCompartido()) {
+          <svg class="w-7 h-7 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          Compartidos Conmigo
+        } @else {
+          <svg class="w-7 h-7 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+          </svg>
+          Mi Unidad
+        }
+      </h2>
+
+      <!-- Breadcrumbs (Ruta de navegación) -->
+      <nav class="flex items-center space-x-1 text-sm font-medium text-gray-500">
+        @for (ruta of rutaActual(); track $index) {
+          @if ($index > 0) {
+            <svg class="w-4 h-4 text-gray-400 flex-shrink-0 mx-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          }
+
+          @if ($index < rutaActual().length - 1) {
+            <button
+              (click)="onNavegarBreadcrumb.emit({ index: $index, id: ruta.id })"
+              class="hover:text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded transition-colors truncate max-w-[150px]"
+            >
+              {{ $index === 0 && esContextoCompartido() ? 'Compartido' : ruta.nombre }}
+            </button>
+          } @else {
+            <span class="text-gray-700 font-semibold px-1.5 py-0.5 truncate max-w-[200px]">
+              {{ $index === 0 && esContextoCompartido() ? 'Compartido' : ruta.nombre }}
+            </span>
+          }
+        }
+      </nav>
+    </div>
+    
+    @if (!esContextoCompartido()) {
+      <div class="flex space-x-3">
+        <button (click)="abrirModalArchivo()" class="bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors flex items-center">
+          <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+          </svg>
+          Subir Archivo
+        </button>
+        <button (click)="abrirModalCarpeta()" class="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm transition-colors flex items-center">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Nueva Carpeta
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- BARRA DE BÚSQUEDA Y FILTROS EN TIEMPO REAL -->
+  <div class="bg-white border border-gray-200 rounded-xl p-3.5 mb-6 shadow-2xs flex flex-wrap items-center gap-3 flex-shrink-0" (click)="$event.stopPropagation()">
+    
+    <!-- Input de bUsqueda por nombre -->
+    <div class="relative flex-1 min-w-[220px]">
+      <svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+      <input 
+        type="text" 
+        [ngModel]="terminoBusqueda()" 
+        (ngModelChange)="terminoBusqueda.set($event)"
+        placeholder="Buscar carpetas o archivos por nombre..." 
+        class="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+    </div>
+
+    <!-- Filtro por Tipo de Archivo -->
+    <div class="flex items-center space-x-2">
+      <label class="text-xs font-semibold text-gray-500 uppercase">Tipo:</label>
+      <select 
+        [ngModel]="filtroTipo()" 
+        (ngModelChange)="filtroTipo.set($event)"
+        class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="todos">Todos</option>
+        <option value="txt">Texto (.txt)</option>
+        <option value="md">Markdown (.md)</option>
+      </select>
+    </div>
+
+    <!-- Filtro Fecha Desde -->
+    <div class="flex items-center space-x-2">
+      <label class="text-xs font-semibold text-gray-500 uppercase">Desde:</label>
+      <input 
+        type="date" 
+        [ngModel]="filtroFechaInicio()" 
+        (ngModelChange)="filtroFechaInicio.set($event)"
+        class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <!-- Filtro Fecha Hasta -->
+    <div class="flex items-center space-x-2">
+      <label class="text-xs font-semibold text-gray-500 uppercase">Hasta:</label>
+      <input 
+        type="date" 
+        [ngModel]="filtroFechaFin()" 
+        (ngModelChange)="filtroFechaFin.set($event)"
+        class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <!-- Botón Limpiar  -->
+    @if (tienesFiltrosActivos()) {
+      <button 
+        type="button"
+        (click)="limpiarFiltros()" 
+        class="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center">
+        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        Limpiar
+      </button>
+    }
+  </div>
+
+  <!-- CONTENIDO -->
+  <div class="flex-1 overflow-y-auto pb-8">
+    @if (cargando()) {
+      <div class="flex justify-center items-center h-40">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+      </div>
+    } @else {
+      @if (carpetasFiltradas().length > 0) {
+        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Carpetas ({{ carpetasFiltradas().length }}) </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-10">
+          @for (carpeta of carpetasFiltradas(); track carpeta._id) {
+            <app-carpeta-card
+              [carpeta]="carpeta"
+              [menuActivo]="menuActivoId() === carpeta._id"
+              [modoCompartido]="!puedeEditar(carpeta)"
+              [mostrarInfoCompartido]="esContextoCompartido()"
+              (onAbrir)="onAbrirCarpeta.emit(carpeta)"
+              (onToggleMenu)="toggleMenu($event, carpeta._id)"
+              (onRenombrar)="abrirModalRenombrar($event, carpeta, 'carpeta')"
+              (onMover)="abrirModalMover($event, carpeta, 'carpeta')"
+              (onEliminar)="enviarAPapelera($event, carpeta, 'carpeta')"
+              (onCompartir)="abrirModalCompartir($event, carpeta, 'carpeta')">
+            </app-carpeta-card>
+          }
+        </div>
+      }
+
+      @if (archivosFiltrados().length > 0) {
+        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Archivos ({{ archivosFiltrados().length }})</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          @for (archivo of archivosFiltrados(); track archivo._id) {
+            <app-archivo-card
+              [archivo]="archivo"
+              [menuActivo]="menuActivoId() === archivo._id"
+              [modoCompartido]="!puedeEditar(archivo)"
+              [mostrarInfoCompartido]="esContextoCompartido()"
+              (onDescargar)="onDescargarArchivo.emit(archivo)"
+              (onToggleMenu)="toggleMenu($event, archivo._id)"
+              (onRenombrar)="abrirModalRenombrar($event, archivo, 'archivo')"
+              (onMover)="abrirModalMover($event, archivo, 'archivo')"
+              (onEliminar)="enviarAPapelera($event, archivo, 'archivo')"
+              (onCompartir)="abrirModalCompartir($event, archivo, 'archivo')">
+            </app-archivo-card>
+          }
+        </div>
+      }
+
+      @if (carpetasFiltradas().length === 0 && archivosFiltrados().length === 0) {
+        <div class="flex flex-col items-center justify-center h-64 mt-10 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50/50">
+          @if (tienesFiltrosActivos()){
+            <p class="text-base font-medium text-gray-700">No se encontraron resultados para los filtros aplicados</p>
+            <button (click)="limpiarFiltros()" class="mt-2 text-sm text-blue-600 hover:underline font-medium">
+              Restablecer búsqueda y filtros
+            </button>
+          }@else{
+            <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path>
+            </svg>
+            <p class="text-lg font-medium text-gray-700">Esta carpeta está vacía</p>
+            <p class="text-sm text-gray-500 mt-1">Usa el botón "Nuevo Elemento" para empezar a organizar</p>
+          }
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<!-- MODALES INTELIGENTES -->
+@if (mostrarModalArchivo()) {
+  <app-modal-archivo (onCerrar)="mostrarModalArchivo.set(false)" (onGuardado)="recargarVista()"></app-modal-archivo>
+}
+
+@if (mostrarModalCarpeta()) {
+  <app-modal-carpeta (onCerrar)="mostrarModalCarpeta.set(false)" (onGuardado)="recargarVista()"></app-modal-carpeta>
+}
+
+@if (mostrarModalRenombrar()) {
+  <app-modal-renombrar [item]="itemSeleccionado()" [tipo]="tipoItemSeleccionado()!" (onCerrar)="mostrarModalRenombrar.set(false)" (onGuardado)="recargarVista()"></app-modal-renombrar>
+}
+
+@if (mostrarModalMover()) {
+  <app-modal-mover [item]="itemSeleccionado()" [tipo]="tipoItemSeleccionado()!" (onCerrar)="mostrarModalMover.set(false)" (onGuardado)="recargarVista()"></app-modal-mover>
+}
+
+@if (mostrarModalConfirmacion()) {
+  <app-modal-confirmacion [item]="itemSeleccionado()" [tipo]="tipoItemSeleccionado()!" (onCerrar)="mostrarModalConfirmacion.set(false)" (onGuardado)="recargarVista()"></app-modal-confirmacion>
+}
+
+@if (mostrarModalCompartir()) {
+  <app-modal-compartir [item]="itemSeleccionado()" [tipo]="tipoItemSeleccionado()!" (onCerrar)="mostrarModalCompartir.set(false)" (onGuardado)="recargarVista()"></app-modal-compartir>
+}

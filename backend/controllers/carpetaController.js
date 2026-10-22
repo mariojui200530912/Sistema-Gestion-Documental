@@ -13,7 +13,7 @@ exports.obtenerRaiz = async (req, res) => {
 exports.obtenerCarpeta = async (req, res) => {
     try {
         const resultado = await carpetaService.obtenerContenido(req.params.id, req.usuario.id);
-        res.json({ mensaje: 'Contenido obtenido', ...resultado });
+        res.json({ mensaje: 'Contenido obtenido', contenido: resultado });
     } catch (error) {
         if (error.message === 'CARPETA_NO_ENCONTRADA') return res.status(404).json({ mensaje: 'Carpeta no encontrada o sin permisos' });
         console.error(error);

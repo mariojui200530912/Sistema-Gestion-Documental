@@ -1,5 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, input, output } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
+import { PapeleraService } from '../../../../core/services/papelera.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-modal-confirmacion',
@@ -8,11 +10,34 @@ import { Component, input, output } from '@angular/core';
   styleUrl: './modal-confirmacion.component.css',
 })
 export class ModalConfirmacionComponent {
-  titulo = input.required<string>();
-  mensaje = input.required<string>();
-  textoBoton = input<string>('Eliminar');
-  esPeligroso = input<boolean>(true); // Si es true, el botón será rojo. Si es false, azul.
+  item = input.required<any>();
+  tipo = input.required<'carpeta' | 'archivo'>();
 
-  onConfirmar = output<void>();
-  onCancelar = output<void>();
+  // Emisores
+  onCerrar = output<void>();
+  onGuardado = output<void>(); // Emite cuando se mueve a la papelera exitosamente
+
+  private papeleraService = inject(PapeleraService);
+  private toastService = inject(ToastService);
+
+  procesando = signal<boolean>(false);
+
+  confirmar() {
+    this.procesando.set(true);
+    const elemento = this.item();
+    const tipoActual = this.tipo();
+
+    this.papeleraService.cambiarEstado(elemento._id, tipoActual, 'papelera').subscribe({
+      next: () => {
+        this.toastService.mostrarExito(`${tipoActual === 'carpeta' ? 'Carpeta enviada' : 'Archivo enviado'} a la papelera`);
+        this.procesando.set(false);
+        this.onGuardado.emit(); // Avisa al explorador que recargue
+        this.onCerrar.emit();   // Cierra el modal
+      },
+      error: (err) => {
+        this.toastService.mostrarError(err.error?.mensaje || 'Error al mover a la papelera');
+        this.procesando.set(false);
+      }
+    });
+  }
 }

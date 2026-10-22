@@ -1,0 +1,264 @@
+<div class="h-full w-full flex flex-col p-8 overflow-y-auto">
+  <!-- CABECERA -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 border-b border-gray-200 pb-4 gap-4 flex-shrink-0">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+        <svg class="w-7 h-7 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+        </svg>
+        Panel de Reportes y Analíticas
+      </h2>
+      <p class="text-sm text-gray-500 mt-1">Consultas avanzadas de almacenamiento, usuarios, compartición y actividad con filtros.</p>
+    </div>
+  </div>
+
+  <!-- ESTADO DE ACCESO RESTRINGIDO -->
+  @if (sinPermisos()) {
+    <div class="flex flex-col items-center justify-center h-64 bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+      <h3 class="text-lg font-bold text-amber-900">Acceso Restringido</h3>
+      <p class="text-sm text-amber-700 mt-1">Se requiere rol de Administrador para visualizar este módulo.</p>
+    </div>
+  } @else {
+    
+    <!-- BARRA DE FILTROS GLOBALES -->
+    <div class="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-2xs flex flex-wrap gap-4 items-end">
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Fecha Inicio (Rango)</label>
+        <input type="date" [ngModel]="filtroFechaInicio()" (ngModelChange)="filtroFechaInicio.set($event)" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Fecha Fin (Rango)</label>
+        <input type="date" [ngModel]="filtroFechaFin()" (ngModelChange)="filtroFechaFin.set($event)" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Usuario Específico</label>
+        <select [ngModel]="usuarioSeleccionadoId()" (ngModelChange)="usuarioSeleccionadoId.set($event)" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="">-- Todos los usuarios --</option>
+          @for (u of listaUsuarios(); track u._id) {
+            <option [value]="u._id">{{ u.nombres }} {{ u.apellidos }} ({{ u.correo }})</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Agrupar Período Actividad</label>
+        <select [ngModel]="periodoActividad()" (ngModelChange)="periodoActividad.set($event)" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          <option value="dia">Por Día</option>
+          <option value="mes">Por Mes</option>
+        </select>
+      </div>
+      <div class="flex gap-2">
+        <button (click)="aplicarFiltros()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-xs">
+          Aplicar Filtros
+        </button>
+        <button (click)="limpiarFiltros()" class="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+          Limpiar
+        </button>
+      </div>
+    </div>
+
+    @if (cargando()) {
+      <div class="flex justify-center items-center h-48">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    } @else {
+      
+      <!-- SECCIÓN 1: ARCHIVOS Y ALMACENAMIENTO -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">📁 Reportes de Archivos y Almacenamiento</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Tipos de Archivo -->
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Agrupados por Tipo</h4>
+            <div class="space-y-3">
+              @for (tipo of datosArchivos().agrupadosPorTipo; track tipo._id) {
+                <div>
+                  <div class="flex justify-between text-xs font-medium text-gray-600 mb-1">
+                    <span class="uppercase">{{ tipo._id || 'Otro' }} ({{ tipo.total }})</span>
+                    <span>{{ formatearTamano(tipo.tamanoTotal) }}</span>
+                  </div>
+                  <div class="w-full bg-gray-100 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full" [style.width.%]="calcularPorcentaje(tipo.total, totalArchivosSistema())"></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Archivos en Rango de Fechas -->
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Creados en Rango ({{ datosArchivos().totalArchivosRango }})</h4>
+            <ul class="space-y-2 max-h-48 overflow-y-auto">
+              @for (arch of datosArchivos().archivosEnRango; track arch._id) {
+                <li class="text-xs flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                  <span class="font-medium text-gray-800 truncate mr-2" [title]="arch.nombre">{{ arch.nombre }}</span>
+                  <span class="text-gray-400 flex-shrink-0">{{ arch.createdAt | date:'shortDate' }}</span>
+                </li>
+              } @empty {
+                <li class="text-xs text-gray-400 italic">No hay archivos en este rango.</li>
+              }
+            </ul>
+          </div>
+
+          <!-- Más Activos -->
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Archivos con Más Operaciones</h4>
+            <ul class="space-y-2">
+              @for (arch of datosArchivos().archivosMasActivos; track arch._id) {
+                <li class="text-xs flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                  <span class="font-medium text-gray-800 truncate mr-2">{{ arch.archivoInfo.nombre }}</span>
+                  <span class="bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">{{ arch.cantidadOperaciones }} ops</span>
+                </li>
+              } @empty {
+                <li class="text-xs text-gray-400 italic">Sin registros.</li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: REPORTE DE USUARIOS -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">👥 Reportes de Usuarios</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Top 10 Usuarios (Más Archivos y Espacio)</h4>
+            <ul class="divide-y divide-gray-100">
+              @for (u of datosUsuarios().topArchivos; track u._id; let idx = $index) {
+                <li class="py-2 flex justify-between items-center text-xs">
+                  <span class="font-medium text-gray-800">{{ idx + 1 }}. {{ u.usuario.nombres }} {{ u.usuario.apellidos }}</span>
+                  <span class="text-gray-500 font-bold">{{ u.totalArchivos }} arch. ({{ formatearTamano(u.espacioTotal) }})</span>
+                </li>
+              }
+            </ul>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Usuarios con Más Recursos Compartidos</h4>
+            <ul class="divide-y divide-gray-100">
+              @for (c of datosUsuarios().topCompartidores; track c._id; let idx = $index) {
+                <li class="py-2 flex justify-between items-center text-xs">
+                  <span class="font-medium text-gray-800">{{ idx + 1 }}. {{ c.usuario.nombres }} {{ c.usuario.apellidos }}</span>
+                  <span class="text-green-700 font-bold bg-green-50 px-2 py-0.5 rounded-full">{{ c.recursosCompartidos }} recursos</span>
+                </li>
+              } @empty {
+                <li class="text-xs text-gray-400 italic">Sin datos.</li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: REPORTE DE COMPARTICIÓN -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">🔗 Reportes de Compartición</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Archivos con Más Usuarios</h4>
+            <ul class="space-y-2">
+              @for (item of datosComparticion().archivosMasCompartidos; track item._id) {
+                <li class="text-xs flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                  <span class="truncate mr-2 font-medium text-gray-800">{{ item.nombre }}</span>
+                  <span class="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full flex-shrink-0">{{ item.cantidadUsuarios }} usu.</span>
+                </li>
+              } @empty {
+                <li class="text-xs text-gray-400 italic">Ninguno compartido masivamente.</li>
+              }
+            </ul>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Compartidos por Usuario Seleccionado</h4>
+            @if (!usuarioSeleccionadoId()) {
+              <p class="text-xs text-amber-600 italic">Selecciona un usuario arriba en los filtros para ver este reporte.</p>
+            } @else {
+              <ul class="space-y-2 max-h-40 overflow-y-auto">
+                @for (item of datosComparticion().compartidosPorUsuario; track item._id) {
+                  <li class="text-xs bg-gray-50 p-2 rounded-lg">
+                    <p class="font-medium text-gray-800">{{ item.nombre }} <span class="text-[10px] text-gray-400 uppercase">({{ item.tipo }})</span></p>
+                    <p class="text-[10px] text-blue-600 mt-0.5">Accesos otorgados: {{ item.accesos.length }}</p>
+                  </li>
+                } @empty {
+                  <li class="text-xs text-gray-400 italic">Este usuario no ha compartido recursos.</li>
+                }
+              </ul>
+            }
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Recibidos por Usuario Seleccionado</h4>
+            @if (!usuarioSeleccionadoId()) {
+              <p class="text-xs text-amber-600 italic">Selecciona un usuario arriba en los filtros para ver este reporte.</p>
+            } @else {
+              <ul class="space-y-2 max-h-40 overflow-y-auto">
+                @for (item of datosComparticion().recibidosPorUsuario; track item._id) {
+                  <li class="text-xs bg-gray-50 p-2 rounded-lg">
+                    <p class="font-medium text-gray-800">{{ item.nombre }} <span class="text-[10px] text-gray-400 uppercase">({{ item.tipo }})</span></p>
+                    <p class="text-[10px] text-gray-500">De: {{ item.propietario?.nombres }} | Permiso: <strong class="text-green-600">{{ item.permiso }}</strong></p>
+                  </li>
+                } @empty {
+                  <li class="text-xs text-gray-400 italic">No ha recibido recursos compartidos.</li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 4: REPORTE DE ACTIVIDAD -->
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">⚡ Reportes de Actividad y Bitácora</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Operaciones por Período</h4>
+            <ul class="space-y-1.5 max-h-48 overflow-y-auto">
+              @for (p of datosActividad().operacionesPorPeriodo; track p._id) {
+                <li class="text-xs flex justify-between items-center bg-gray-50 px-3 py-1.5 rounded">
+                  <span class="font-medium text-gray-700">{{ p._id }}</span>
+                  <span class="font-bold text-indigo-600">{{ p.total }} ops</span>
+                </li>
+              } @empty {
+                <li class="text-xs text-gray-400 italic">Sin datos para este período.</li>
+              }
+            </ul>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Operaciones por Tipo y Acción</h4>
+            <ul class="space-y-1.5">
+              @for (acc of datosActividad().accionesGenerales; track acc._id) {
+                <li class="text-xs flex justify-between items-center bg-gray-50 px-3 py-1.5 rounded">
+                  <span class="font-medium text-gray-700 capitalize">{{ acc._id.recurso }} - {{ acc._id.accion }}</span>
+                  <span class="font-bold text-blue-600">{{ acc.totalAcciones }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
+            <h4 class="text-sm font-bold text-gray-700 mb-3">Bitácora / Historial Filtrado</h4>
+            <ul class="space-y-2 max-h-48 overflow-y-auto">
+              @for (h of datosActividad().historialFiltrado; track h._id) {
+                <li class="text-xs bg-gray-50 p-2 rounded-lg">
+                  <div class="flex justify-between font-semibold text-gray-800">
+                    <span class="capitalize text-blue-600">{{ h.accion }} ({{ h.tipo_recurso }})</span>
+                    <span class="text-[10px] text-gray-400">{{ h.fecha | date:'short' }}</span>
+                  </div>
+                  <p class="text-[11px] text-gray-500 mt-0.5">Usuario: {{ h.usuario_id?.nombres || 'Sistema' }}</p>
+                </li>
+              } @empty {
+                <li class="text-xs text-gray-400 italic">No hay historial para los filtros seleccionados.</li>
+              }
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+    }
+  }
+</div>

@@ -18,16 +18,22 @@ class CarpetaService {
         return { carpetas, archivos };
     }
 
-    async obtenerContenido(idCarpeta, usuarioId) {
-        const carpetaActual = await Carpeta.findOne({ _id: idCarpeta, propietario_id: usuarioId, estado: 'activo' });
-        if (!carpetaActual) {
-            throw new Error('CARPETA_NO_ENCONTRADA');
-        }
+    async obtenerContenido(carpetaId, usuarioId) {
+        const carpeta = await Carpeta.findOne({
+            _id: carpetaId,
+            estado: 'activo',
+            $or: [
+                { propietario_id: usuarioId },
+                { 'accesos.usuario_id': usuarioId } 
+            ]
+        });
 
-        const carpetas = await Carpeta.find({ carpeta_padre_id: idCarpeta, estado: 'activo' });
-        const archivos = await Archivo.find({ carpeta_id: idCarpeta, estado: 'activo' });
+        if (!carpeta) throw new Error('CARPETA_NO_ENCONTRADA');
 
-        return { carpetaActual, contenido: { carpetas, archivos } };
+        const subcarpetas = await Carpeta.find({ carpeta_padre_id: carpetaId, estado: 'activo' });
+        const archivos = await Archivo.find({ carpeta_id: carpetaId, estado: 'activo' });
+
+        return { carpetaActual: carpeta, carpetas: subcarpetas, archivos };
     }
 
     async obtenerTodas(usuarioId){
@@ -67,8 +73,15 @@ class CarpetaService {
 
     async crear(nombre, carpetaPadreId, usuarioId) {
         if (carpetaPadreId) {
-            const padre = await Carpeta.findOne({ _id: carpetaPadreId, propietario_id: usuarioId, estado: 'activo' });
-            if (!padre) throw new Error('CARPETA_PADRE_INVALIDA');
+            const carpetaPadre = await Carpeta.findOne({
+                _id: carpetaPadreId,
+                estado: 'activo',
+                $or: [
+                    { propietario_id: usuarioId },
+                    { accesos: { $elemMatch: { usuario_id: usuarioId, nivel_permiso: 'edicion' } } }
+                ]
+            });
+            if (!carpetaPadre) throw new Error('CARPETA_PADRE_INVALIDA');
         }
 
         const carpetaExistente = await Carpeta.findOne({
@@ -113,7 +126,14 @@ class CarpetaService {
     }
 
     async renombrar(idCarpeta, nuevoNombre, usuarioId) {
-        const carpeta = await Carpeta.findOne({ _id: idCarpeta, propietario_id: usuarioId, estado: 'activo' });
+        const carpeta = await Carpeta.findOne({
+            _id: carpetaId,
+            estado: 'activo',
+            $or: [
+                { propietario_id: usuarioId },
+                { accesos: { $elemMatch: { usuario_id: usuarioId, nivel_permiso: 'edicion' } } }
+            ]
+        });
         if (!carpeta) throw new Error('CARPETA_NO_ENCONTRADA');
 
         if (carpeta.nombre === nuevoNombre) return carpeta;
@@ -152,7 +172,14 @@ class CarpetaService {
     }
 
     async mover(idCarpeta, nuevaCarpetaPadreId, usuarioId) {
-        const carpetaMover = await Carpeta.findOne({ _id: idCarpeta, propietario_id: usuarioId, estado: 'activo' });
+        const carpeta = await Carpeta.findOne({
+            _id: carpetaId,
+            estado: 'activo',
+            $or: [
+                { propietario_id: usuarioId },
+                { accesos: { $elemMatch: { usuario_id: usuarioId, nivel_permiso: 'edicion' } } }
+            ]
+        });
         if (!carpetaMover) throw new Error('CARPETA_NO_ENCONTRADA');
 
         // Regla de negocio: No se puede mover a la misma carpeta donde ya esta

@@ -17,6 +17,14 @@ class PapeleraService {
             throw new Error('PARAMETROS_INVALIDOS');
         }
 
+        const filtroPermisos = {
+            _id: id,
+            $or: [
+                { propietario_id: usuarioId },
+                { accesos: { $elemMatch: { usuario_id: usuarioId, nivel_permiso: 'edicion' } } }
+            ]
+        };
+        
         let elemento;
         if (tipo === 'archivo') {
             elemento = await Archivo.findOneAndUpdate(

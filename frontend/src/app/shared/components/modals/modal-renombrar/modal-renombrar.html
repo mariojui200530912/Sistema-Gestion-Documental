@@ -1,27 +1,82 @@
-<div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in-up">
-    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-      <h3 class="text-lg font-bold text-gray-800">Renombrar {{ tipoItemSeleccionado() }}</h3>
-      <button (click)="onCerrar.emit()" class="text-gray-400 hover:text-gray-600 transition-colors">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+    
+    <!-- CABECERA -->
+    <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+      <h3 class="text-lg font-bold text-gray-800">
+        Renombrar {{ tipo() === 'carpeta' ? 'Carpeta' : 'Archivo' }}
+      </h3>
+      <button (click)="onCerrar.emit()" class="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
       </button>
     </div>
-    <form [formGroup]="form()" (ngSubmit)="onGuardar.emit()">
-      <div class="p-6">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Nuevo nombre</label>
-        <div class="flex items-center">
-          <input type="text" formControlName="nombre" autofocus class="flex-1 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
-          @if (tipoItemSeleccionado() === 'archivo') {
-            <span class="ml-2 px-3 py-2 bg-gray-100 border border-gray-300 text-gray-500 rounded-lg font-medium text-sm">
-              .{{ itemSeleccionado()?.nombre?.split('.')?.pop() }}
+
+    <!-- FORMULARIO -->
+    <form [formGroup]="renombrarForm" (ngSubmit)="guardar()">
+      <div class="px-6 py-6">
+        <label for="nuevo_nombre" class="block text-sm font-medium text-gray-700 mb-2">Nuevo nombre</label>
+        
+        <div class="relative flex items-center">
+          <input 
+            id="nuevo_nombre" 
+            type="text" 
+            formControlName="nombre"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+            [ngClass]="{'rounded-r-none border-r-0': tipo() === 'archivo'}"
+            placeholder="Escribe el nuevo nombre"
+            autocomplete="off"
+            autofocus>
+            
+          <!-- Extensión visual bloqueada (Solo para archivos) -->
+          @if (tipo() === 'archivo') {
+            <span class="px-3 py-2 bg-gray-100 border border-gray-300 text-gray-500 rounded-r-lg text-sm font-medium">
+              {{ extensionArchivo() }}
             </span>
           }
         </div>
+        
+        <!-- Validaciones -->
+        @if (renombrarForm.get('nombre')?.invalid && (renombrarForm.get('nombre')?.dirty || renombrarForm.get('nombre')?.touched)) {
+          <p class="text-red-500 text-xs mt-2 font-medium">
+            @if (renombrarForm.get('nombre')?.hasError('required')) {
+              El nombre es obligatorio.
+            }
+            @if (renombrarForm.get('nombre')?.hasError('minlength')) {
+              Debe tener al menos 2 caracteres.
+            }
+          </p>
+        }
       </div>
-      <div class="px-6 py-4 bg-gray-50 flex justify-end space-x-3 border-t border-gray-100">
-        <button type="button" (click)="onCerrar.emit()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
-        <button type="submit" [disabled]="form().invalid" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors">Guardar</button>
+
+      <!-- PIE / BOTONES -->
+      <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-3">
+        <button 
+          type="button" 
+          (click)="onCerrar.emit()" 
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none transition-colors"
+          [disabled]="guardando()">
+          Cancelar
+        </button>
+        
+        <button 
+          type="submit" 
+          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none flex items-center transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          [disabled]="renombrarForm.invalid || guardando()">
+          
+          @if (guardando()) {
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Guardando...
+          } @else {
+            Guardar
+          }
+        </button>
       </div>
     </form>
+
   </div>
 </div>

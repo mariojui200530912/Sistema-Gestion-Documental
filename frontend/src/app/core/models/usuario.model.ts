@@ -3,6 +3,8 @@ export interface Usuario {
   nombres: string;
   apellidos: string;
   correo: string;
-  rol: 'admin' | 'usuario';
+  rol: 'administrador' | 'usuario';
+  estado?: string;
   espacioUtilizado?: number;
+  espacioAsignado?: number
 }

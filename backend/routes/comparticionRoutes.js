@@ -9,5 +9,6 @@ router.post('/', comparticionController.compartirRecurso);
 router.delete('/revocar', comparticionController.revocarPermiso);
 
 router.get('/conmigo', comparticionController.obtenerCompartidosConmigo);
+router.get('/accesos/:tipo/:id', comparticionController.obtenerAccesos);
 
 module.exports = router;

@@ -9,6 +9,7 @@ router.use(adminMiddleware); // Todos los reportes requieren ser administrador
 
 router.get('/archivos', reporteController.reporteArchivos);
 router.get('/usuarios', reporteController.reporteUsuarios);
+router.get('/comparticion', reporteController.reporteComparticion);
 router.get('/actividad', reporteController.reporteActividad);
 
 module.exports = router;

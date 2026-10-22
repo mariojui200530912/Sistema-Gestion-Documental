@@ -1,70 +1,51 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CarpetaService } from '../../../../core/services/carpeta.service';
 import { ArchivoService } from '../../../../core/services/archivo.service';
-import { PapeleraService } from '../../../../core/services/papelera.service';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ToastService } from '../../../../core/services/toast.service';
-import { AuthService } from '../../../../core/services/auth.service';
 import { CommonModule } from '@angular/common';
-import { CarpetaCardComponent } from '../../../../shared/components/carpeta-card/carpeta-card.component';
-import { ArchivoCardComponent } from '../../../../shared/components/archivo-card/archivo-card.component';
-import { ModalArchivo } from '../../../../shared/components/modals/modal-archivo/modal-archivo';
-import { ModalCarpeta } from '../../../../shared/components/modals/modal-carpeta/modal-carpeta';
-import { ModalMover } from '../../../../shared/components/modals/modal-mover/modal-mover';
-import { ModalRenombrar } from '../../../../shared/components/modals/modal-renombrar/modal-renombrar';
-import { ModalCompartirComponent } from '../../../../shared/components/modals/modal-compartir/modal-compartir.component';
-import { ComparticionService } from '../../../../core/services/comparticion.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { ExploradorArchivosComponent } from '../../../../shared/components/explorador-archivos/explorador-archivos.component';
+
+type TipoItem = 'carpeta' | 'archivo';
 
 @Component({
   selector: 'app-mi-unidad',
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, CarpetaCardComponent, ArchivoCardComponent, ModalArchivo, ModalCarpeta, ModalMover, ModalRenombrar, ModalCompartirComponent],
+  host: { class: 'flex-1 flex flex-col min-h-0 overflow-hidden' },
+  imports: [CommonModule, ExploradorArchivosComponent],
   templateUrl: './mi-unidad.component.html',
   styleUrl: './mi-unidad.component.css',
 })
 export class MiUnidadComponent implements OnInit{
-  private authService = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private carpetaService = inject(CarpetaService);
   private archivoService = inject(ArchivoService);
-  private papeleraService = inject(PapeleraService);
-  private comparticionService = inject(ComparticionService);
-  private fb = inject(FormBuilder);
   private toastService = inject(ToastService);
 
-  usuario = this.authService.usuarioActual;
   carpetas = this.carpetaService.carpetas;
   archivos = this.carpetaService.archivos;
   cargando = this.carpetaService.cargando;
-  carpetaActualId = this.carpetaService.carpetaActualId;
   rutaActual = this.carpetaService.rutaActual;
+  carpetaActualId = this.carpetaService.carpetaActualId;
+
+  esContextoCompartido = signal<boolean>(false);
   
-  mostrarModalCarpeta = signal<boolean>(false);
-  mostrarModalArchivo = signal<boolean>(false);
-  archivoSeleccionado = signal<File | null>(null);
-  subiendoArchivo = signal<boolean>(false);
-
-  // --- SIGNALS PARA EL MENU Y RENOMBRAR ---
-  menuActivoId = signal<string | null>(null);
-  mostrarModalRenombrar = signal<boolean>(false);
-  itemSeleccionado = signal<any>(null); 
-  tipoItemSeleccionado = signal<'carpeta' | 'archivo' | null>(null);
-
-  mostrarModalMover = signal<boolean>(false);
-  listaCarpetasDestino = signal<any[]>([]); 
-  carpetaDestinoSeleccionada = signal<string | null>(null);
-
-  mostrarModalCompartir = signal<boolean>(false);
-  compartiendo = signal<boolean>(false);
-
-  renombrarForm = this.fb.group({
-    nombre: ['', [Validators.required, Validators.minLength(2)]]
-  });
-
-  carpetaForm = this.fb.group({
-    nombre: ['', [Validators.required, Validators.minLength(2)]]
-  });
-
   ngOnInit() {
-    this.cargarRaiz();
+    this.esContextoCompartido.set(this.router.url.includes('compartidos'));
+
+    this.route.queryParams.subscribe(params => {
+      if (params['id'] && params['nombre']) {
+        this.carpetaService.obtenerContenidoCarpeta(params['id'], params['nombre']).subscribe();
+      } else if (params['folder']) {
+        this.carpetaService.obtenerContenidoCarpeta(params['folder'], 'Carpeta').subscribe();
+      } else {
+        if (this.esContextoCompartido()) {
+          this.router.navigate(['/dashboard/compartidos']);
+        } else {
+          this.cargarRaiz();
+        }
+      }
+    });
   }
 
   cargarRaiz() {
@@ -75,100 +56,26 @@ export class MiUnidadComponent implements OnInit{
     this.carpetaService.obtenerContenidoCarpeta(carpeta._id, carpeta.nombre).subscribe();
   }
 
-  abrirModal() {
-    this.carpetaForm.reset();
-    this.mostrarModalCarpeta.set(true);
-  }
-
-  cerrarModal() {
-    this.mostrarModalCarpeta.set(false);
-  }
-
-  crearCarpeta() {
-    if (this.carpetaForm.invalid) return;
-
-    const nombre = this.carpetaForm.value.nombre!;
-    const padreId = this.carpetaActualId(); // null si estamos en la raíz, o el ID de la carpeta actual
-
-    this.carpetaService.crearCarpeta(nombre, padreId).subscribe({
-      next: () => {
-        this.cerrarModal();
-        this.toastService.mostrarExito('Carpeta creada correctamente');
-      },
-      error: (err) => {
-        console.error('Error al crear carpeta:', err);
-        this.toastService.mostrarError('Error al crear carpeta');
-      }
-    });
-  }
-
-  abrirModalArchivo() {
-    this.archivoSeleccionado.set(null);
-    this.mostrarModalArchivo.set(true);
-  }
-
-  cerrarModalArchivo() {
-    this.mostrarModalArchivo.set(false);
-    this.archivoSeleccionado.set(null);
-  }
-
-  onArchivoSeleccionado(event: any) {
-    const file: File = event.target.files[0];
-    if (file) {
-      const extension = file.name.split('.').pop()?.toLowerCase();
-
-      if(extension === 'txt' || extension === 'md'){
-        this.archivoSeleccionado.set(file);
-      } else {
-        this.archivoSeleccionado.set(null);
-        this.toastService.mostrarError("Solo se permiten archivos de texto (.txt) y Markdown (.md)");
-        event.target.value = '';
-      }
-    }
-  }
-
-  subirArchivo() {
-    const file = this.archivoSeleccionado();
-    if (!file) return;
-
-    this.subiendoArchivo.set(true);
-    const padreId = this.carpetaActualId();
-
-    this.archivoService.subirArchivo(file, padreId).subscribe({
-      next: () => {
-        this.subiendoArchivo.set(false);
-        this.cerrarModalArchivo();
-        this.toastService.mostrarExito('Archivo subido correctamente');
-      },
-      error: (err) => {
-        this.subiendoArchivo.set(false);
-        console.error('Error al subir archivo:', err);
-        this.toastService.mostrarError(err.error?.mensaje || 'Error al subir el archivo');
-      }
-    });
-  }
-
   navegarBreadcrumb(index: number, id: string | null) {
     if (id === null) {
-      this.cargarRaiz();
+      if (this.esContextoCompartido()) {
+        this.router.navigate(['/dashboard/compartidos']);
+      } else {
+        this.cargarRaiz();
+      }
     } else {
-      // Usamos el id de la ruta para retroceder
       this.carpetaService.obtenerContenidoCarpeta(id, '', index).subscribe();
     }
   }
 
   descargarArchivo(archivo: any) {
     this.toastService.mostrarExito(`Descargando ${archivo.nombre}...`);
-    
     this.archivoService.descargarArchivo(archivo._id).subscribe({
       next: (blob: Blob) => {
-        // Creamos una URL temporal para el archivo binario
         const url = window.URL.createObjectURL(blob);
-        
         const a = document.createElement('a');
         a.href = url;
         a.download = archivo.nombre; 
-        
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -181,76 +88,9 @@ export class MiUnidadComponent implements OnInit{
     });
   }
 
-  // --- LOGICA DEL MENU ---
-  toggleMenu(event: Event, id: string) {
-    event.stopPropagation(); // Evita que se dispare el doble clic al abrir el menú
-    if (this.menuActivoId() === id) {
-      this.menuActivoId.set(null);
-    } else {
-      this.menuActivoId.set(id);
-    }
-  }
-
-  cerrarMenus() {
-    this.menuActivoId.set(null);
-  }
-
-  // --- LÓGICA PARA RENOMBRAR ---
-  abrirModalRenombrar(event: Event, item: any, tipo: 'carpeta' | 'archivo') {
-    event.stopPropagation();
-    this.menuActivoId.set(null); // Cerramos el menú
-    this.itemSeleccionado.set(item);
-    this.tipoItemSeleccionado.set(tipo);
-    
-    // Si es archivo, le quitamos la extensión para que sea más fácil de editar
-    let nombreLimpio = item.nombre;
-    if (tipo === 'archivo' && nombreLimpio.includes('.')) {
-      nombreLimpio = nombreLimpio.substring(0, nombreLimpio.lastIndexOf('.'));
-    }
-    
-    this.renombrarForm.patchValue({ nombre: nombreLimpio });
-    this.mostrarModalRenombrar.set(true);
-  }
-
-  cerrarModalRenombrar() {
-    this.mostrarModalRenombrar.set(false);
-    this.itemSeleccionado.set(null);
-    this.tipoItemSeleccionado.set(null);
-  }
-
-  guardarNuevoNombre() {
-    if (this.renombrarForm.invalid) return;
-
-    const item = this.itemSeleccionado();
-    const tipo = this.tipoItemSeleccionado();
-    let nuevoNombre = this.renombrarForm.value.nombre!;
-
-    if (tipo === 'archivo') {
-      const extension = item.nombre.split('.').pop();
-      nuevoNombre = `${nuevoNombre}.${extension}`;
-    }
-
-    const request$ = tipo === 'carpeta' 
-      ? this.carpetaService.renombrarCarpeta(item._id, nuevoNombre)
-      : this.archivoService.renombrarArchivo(item._id, nuevoNombre);
-
-    request$.subscribe({
-      next: () => {
-        this.toastService.mostrarExito(`${tipo === 'carpeta' ? 'Carpeta' : 'Archivo'} renombrado`);
-        this.cerrarModalRenombrar();
-        this.recargarContenidoActual();
-      },
-      error: (err) => {
-        this.toastService.mostrarError(err.error?.mensaje || 'Error al renombrar');
-      }
-    });
-  }
-
   recargarContenidoActual() {
-    // Método auxiliar para recargar la vista actual después de un cambio
     const idPadre = this.carpetaActualId();
     if (idPadre) {
-      // Tomamos el nombre del último breadcrumb
       const ruta = this.rutaActual();
       const nombreCarpeta = ruta[ruta.length - 1].nombre;
       this.carpetaService.obtenerContenidoCarpeta(idPadre, nombreCarpeta).subscribe();
@@ -258,100 +98,4 @@ export class MiUnidadComponent implements OnInit{
       this.cargarRaiz();
     }
   }
-
-  abrirModalMover(event: Event, item: any, tipo: 'carpeta' | 'archivo') {
-    event.stopPropagation();
-    this.menuActivoId.set(null);
-    this.itemSeleccionado.set(item);
-    this.tipoItemSeleccionado.set(tipo);
-    this.carpetaDestinoSeleccionada.set(null); // Por defecto, apuntar a la raíz
-    
-    this.carpetaService.obtenerTodasLasCarpetas().subscribe({
-      next: (res) => {
-        const carpetasValidas = res.carpetas.filter(c => c._id !== item._id);
-        this.listaCarpetasDestino.set(carpetasValidas);
-      },
-      error: () => this.toastService.mostrarError('Error al cargar carpetas destino')
-    });
-    this.mostrarModalRenombrar.set(false); 
-    this.mostrarModalMover.set(true);
-  }
-
-  cerrarModalMover() {
-    this.mostrarModalMover.set(false);
-    this.itemSeleccionado.set(null);
-    this.tipoItemSeleccionado.set(null);
-  }
-
-  ejecutarMover() {
-    const item = this.itemSeleccionado();
-    const tipo = this.tipoItemSeleccionado();
-    const destinoId = this.carpetaDestinoSeleccionada();
-
-    const request$ = tipo === 'carpeta'
-      ? this.carpetaService.moverCarpeta(item._id, destinoId)
-      : this.archivoService.moverArchivo(item._id, destinoId);
-
-    request$.subscribe({
-      next: () => {
-        this.toastService.mostrarExito(`${tipo === 'carpeta' ? 'Carpeta' : 'Archivo'} movido correctamente`);
-        this.cerrarModalMover();
-        this.recargarContenidoActual();
-      },
-      error: (err) => {
-        this.toastService.mostrarError(err.error?.mensaje || 'Error al mover');
-      }
-    });
-  }
-
-  enviarAPapelera(event: Event, item: any, tipo: 'carpeta' | 'archivo') {
-    event.stopPropagation();
-    this.menuActivoId.set(null); // Cerramos el menú desplegable
-
-    // Usamos un confirm nativo para evitar borrados accidentales
-    if (confirm(`¿Estás seguro de que deseas enviar "${item.nombre}" a la papelera?`)) {
-      this.papeleraService.cambiarEstado(item._id, tipo, 'papelera').subscribe({
-        next: () => {
-          this.toastService.mostrarExito(`${tipo === 'carpeta' ? 'Carpeta' : 'Archivo'} enviado a la papelera`);
-          this.recargarContenidoActual(); // Refresca la vista para que desaparezca
-        },
-        error: (err) => {
-          console.error(err);
-          this.toastService.mostrarError(err.error?.mensaje || 'Error al enviar a la papelera');
-        }
-      });
-    }
-  }
-
-  abrirModalCompartir(event: Event, item: any, tipo: 'archivo' | 'carpeta') {
-    event.stopPropagation();
-    this.cerrarMenus();
-    this.itemSeleccionado.set(item);
-    this.tipoItemSeleccionado.set(tipo);
-    this.mostrarModalCompartir.set(true);
-  }
-
-  cerrarModalCompartir() {
-    this.mostrarModalCompartir.set(false);
-  }
-
-  ejecutarCompartir(datos: { correo: string, permiso: string }) {
-    const item = this.itemSeleccionado();
-    const tipo = this.tipoItemSeleccionado();
-    if (!item || !tipo) return;
-
-    this.compartiendo.set(true);
-    this.comparticionService.compartirRecurso(item._id, tipo as 'archivo'|'carpeta', datos.correo, datos.permiso).subscribe({
-      next: () => {
-        this.toastService.mostrarExito('Recurso compartido exitosamente');
-        this.cerrarModalCompartir();
-        this.compartiendo.set(false);
-      },
-      error: (err) => {
-        this.toastService.mostrarError(err.error?.mensaje || 'Error al compartir recurso');
-        this.compartiendo.set(false);
-      }
-    });
-  }
-
 }
