@@ -147,7 +147,7 @@ const poblarBaseDeDatos = async () => {
     await HistorialActividad.insertMany(historiales);
     console.log('✅ Historial de actividades guardado.');
 
-    console.log('🎉 Carga inicial completada con éxito. Los datos están 100% coherentes.');
+    console.log('✅ Carga inicial completada con éxito. Los datos están 100% coherentes.');
     process.exit();
   } catch (error) {
     console.error('❌ Error poblando la base de datos:', error);
