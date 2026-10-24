@@ -63,3 +63,24 @@ exports.moverArchivo = async (req, res) => {
         res.status(500).json({ mensaje: 'Error al mover el archivo' });
     }
 };
+
+exports.agregarComentario = async (req, res) => {
+    try {
+        const { texto } = req.body;
+        const archivoId = req.params.id;
+        const usuarioActual = req.usuario.id;
+
+        const comentarios = await archivoService.agregarComentario(archivoId, usuarioActual, texto);
+        
+        res.status(201).json({ mensaje: 'Comentario agregado exitosamente', comentarios });
+    } catch (error) {
+        if (error.message === 'ARCHIVO_NO_ENCONTRADO') {
+            return res.status(404).json({ mensaje: 'Archivo no encontrado' });
+        }
+        if (error.message === 'PERMISO_DENEGADO') {
+            return res.status(403).json({ mensaje: 'No tienes permiso para comentar en este archivo' });
+        }
+        console.error(error);
+        res.status(500).json({ mensaje: 'Error al agregar el comentario' });
+    }
+};

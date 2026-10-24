@@ -22,7 +22,7 @@ export interface RutaBreadcrumb {
 })
 export class CarpetaService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/carpetas/`;
+  private apiUrl = `${environment.apiUrl}/carpetas`;
 
   carpetas = signal<Carpeta[]>([]);
   archivos = signal<Archivo[]>([]);
@@ -31,7 +31,7 @@ export class CarpetaService {
   rutaActual = signal<RutaBreadcrumb[]>([{ id: null, nombre: 'Mi unidad' }]);
 
   crearCarpeta(nombre: string, carpeta_padre_id: string | null) {
-    return this.http.post<{mensaje: string, carpeta: Carpeta}>(this.apiUrl, { nombre, carpeta_padre_id}).pipe(
+    return this.http.post<{mensaje: string, carpeta: Carpeta}>(`${this.apiUrl}/`, { nombre, carpeta_padre_id}).pipe(
       tap({
         next: (res) => {
           this.carpetas.update(carpetasActuales => [...carpetasActuales, res.carpeta]);
@@ -45,7 +45,7 @@ export class CarpetaService {
     this.carpetaActualId.set(null); // Estamos en la raíz
     this.rutaActual.set([{ id: null, nombre: 'Mi unidad' }]);
     
-    return this.http.get<RespuestaContenido>(this.apiUrl).pipe(
+    return this.http.get<RespuestaContenido>(`${this.apiUrl}/`).pipe(
       tap({
         next: (res) => {
           this.carpetas.set(res.contenido.carpetas);
@@ -66,7 +66,7 @@ export class CarpetaService {
     } else {
       this.rutaActual.update(ruta => [...ruta, { id, nombre }]);
     }
-    return this.http.get<RespuestaContenido>(`${this.apiUrl}${id}`).pipe(
+    return this.http.get<RespuestaContenido>(`${this.apiUrl}/${id}`).pipe(
       tap({
         next: (res) => {
           this.carpetas.set(res.contenido.carpetas);
@@ -78,15 +78,19 @@ export class CarpetaService {
     );
   }
 
+  obtenerTodasLasCarpetas() {
+    return this.http.get<{mensaje: string, carpetas: any[]}>(`${this.apiUrl}/todas`); 
+  }
+
   renombrarCarpeta(id: string, nuevoNombre: string) {
-    return this.http.put(`${this.apiUrl}/${id}/renombrar`, { nuevoNombre });
+    return this.http.put(`${this.apiUrl}/${id}/renombrar`, { nuevo_nombre: nuevoNombre });
   }
 
   moverCarpeta(id: string, nuevaCarpetaId: string | null) {
-    return this.http.put(`${this.apiUrl}/${id}/mover`, { nuevaCarpetaId });
+    return this.http.put(`${this.apiUrl}/${id}/mover`, { nueva_carpeta_padre_id: nuevaCarpetaId });
   }
 
-  obtenerTodasLasCarpetas() {
-    return this.http.get<{mensaje: string, carpetas: any[]}>(`${this.apiUrl}todas`); 
+  agregarComentario(idCarpeta: string, texto: string) {
+    return this.http.post<{ mensaje: string, comentarios: any[] }>(`${this.apiUrl}/${idCarpeta}/comentarios`, { texto });
   }
 }

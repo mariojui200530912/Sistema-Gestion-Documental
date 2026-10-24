@@ -137,14 +137,16 @@
             <app-carpeta-card
               [carpeta]="carpeta"
               [menuActivo]="menuActivoId() === carpeta._id"
-              [modoCompartido]="!puedeEditar(carpeta)"
+              [nivelPermiso]="obtenerNivelPermiso(carpeta)"
               [mostrarInfoCompartido]="esContextoCompartido()"
               (onAbrir)="onAbrirCarpeta.emit(carpeta)"
               (onToggleMenu)="toggleMenu($event, carpeta._id)"
               (onRenombrar)="abrirModalRenombrar($event, carpeta, 'carpeta')"
               (onMover)="abrirModalMover($event, carpeta, 'carpeta')"
               (onEliminar)="enviarAPapelera($event, carpeta, 'carpeta')"
-              (onCompartir)="abrirModalCompartir($event, carpeta, 'carpeta')">
+              (onCompartir)="abrirModalCompartir($event, carpeta, 'carpeta')"
+              (onComentar)="abrirModalComentarios($event, carpeta)"
+              (onRevocar)="quitarAcceso($event, carpeta, 'carpeta')">
             </app-carpeta-card>
           }
         </div>
@@ -157,14 +159,16 @@
             <app-archivo-card
               [archivo]="archivo"
               [menuActivo]="menuActivoId() === archivo._id"
-              [modoCompartido]="!puedeEditar(archivo)"
+              [nivelPermiso]="obtenerNivelPermiso(archivo)"
               [mostrarInfoCompartido]="esContextoCompartido()"
               (onDescargar)="onDescargarArchivo.emit(archivo)"
               (onToggleMenu)="toggleMenu($event, archivo._id)"
               (onRenombrar)="abrirModalRenombrar($event, archivo, 'archivo')"
               (onMover)="abrirModalMover($event, archivo, 'archivo')"
               (onEliminar)="enviarAPapelera($event, archivo, 'archivo')"
-              (onCompartir)="abrirModalCompartir($event, archivo, 'archivo')">
+              (onCompartir)="abrirModalCompartir($event, archivo, 'archivo')"
+              (onComentar)="abrirModalComentarios($event, archivo)"
+              (onRevocar)="quitarAcceso($event, archivo, 'archivo')">
             </app-archivo-card>
           }
         </div>
@@ -213,4 +217,8 @@
 
 @if (mostrarModalCompartir()) {
   <app-modal-compartir [item]="itemSeleccionado()" [tipo]="tipoItemSeleccionado()!" (onCerrar)="mostrarModalCompartir.set(false)" (onGuardado)="recargarVista()"></app-modal-compartir>
+}
+
+@if (mostrarModalComentarios()) {
+  <app-modal-comentario [item]="itemSeleccionado()" [tipo]="tipoItemSeleccionado()!" (onCerrar)="mostrarModalComentarios.set(false)" (onComentarioAgregado)="recargarVista()"></app-modal-comentario>
 }

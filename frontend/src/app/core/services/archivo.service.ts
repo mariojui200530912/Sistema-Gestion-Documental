@@ -40,10 +40,14 @@ export class ArchivoService {
   }
 
   renombrarArchivo(id: string, nuevoNombre: string) {
-    return this.http.put(`${this.apiUrl}/${id}/renombrar`, { nuevoNombre });
+    return this.http.put(`${this.apiUrl}/${id}/renombrar`, { nuevo_nombre: nuevoNombre });
   }
 
   moverArchivo(id: string, nuevaCarpetaId: string | null) {
-    return this.http.put(`${this.apiUrl}/${id}/mover`, { nuevaCarpetaId });
+    return this.http.put(`${this.apiUrl}/${id}/mover`, { nueva_carpeta_id: nuevaCarpetaId });
+  }
+
+  agregarComentario(idArchivo: string, texto: string) {
+    return this.http.post<{ mensaje: string, comentarios: any[] }>(`${this.apiUrl}/${idArchivo}/comentarios`, { texto });
   }
 }

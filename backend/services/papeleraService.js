@@ -17,30 +17,36 @@ class PapeleraService {
             throw new Error('PARAMETROS_INVALIDOS');
         }
 
-        const filtroPermisos = {
-            _id: id,
-            $or: [
-                { propietario_id: usuarioId },
-                { accesos: { $elemMatch: { usuario_id: usuarioId, nivel_permiso: 'edicion' } } }
-            ]
-        };
-        
-        let elemento;
-        if (tipo === 'archivo') {
-            elemento = await Archivo.findOneAndUpdate(
-                { _id: id, propietario_id: usuarioId },
-                { estado: accion },
-                { new: true }
-            );
-        } else {
-            elemento = await Carpeta.findOneAndUpdate(
-                { _id: id, propietario_id: usuarioId },
-                { estado: accion },
-                { new: true }
-            );
-        }
+        // Buscar el elemento original para evaluar sus referencias
+        let elemento = tipo === 'archivo' 
+            ? await Archivo.findOne({ _id: id, propietario_id: usuarioId })
+            : await Carpeta.findOne({ _id: id, propietario_id: usuarioId });
 
         if (!elemento) throw new Error('ELEMENTO_NO_ENCONTRADO');
+
+        const updateData = { estado: accion };
+
+        // Logica de Restauracion Segura (Prevención de elementos huerfanos)
+        if (accion === 'activo') {
+            if (tipo === 'archivo' && elemento.carpeta_id) {
+                const carpetaPadre = await Carpeta.findById(elemento.carpeta_id);
+                if (!carpetaPadre || carpetaPadre.estado === 'papelera') {
+                    updateData.carpeta_id = null; // Mueve a la raíz
+                }
+            } else if (tipo === 'carpeta' && elemento.carpeta_padre_id) {
+                const carpetaPadre = await Carpeta.findById(elemento.carpeta_padre_id);
+                if (!carpetaPadre || carpetaPadre.estado === 'papelera') {
+                    updateData.carpeta_padre_id = null; // Mueve a la raíz
+                }
+            }
+        }
+
+        // Aplicar los cambios
+        if (tipo === 'archivo') {
+            elemento = await Archivo.findByIdAndUpdate(id, updateData, { returnDocument: 'after' });
+        } else {
+            elemento = await Carpeta.findByIdAndUpdate(id, updateData, { returnDocument: 'after' });
+        }
 
         await HistorialActividad.create({
             usuario_id: usuarioId,

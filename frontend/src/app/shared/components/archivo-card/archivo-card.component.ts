@@ -11,6 +11,7 @@ export class ArchivoCardComponent {
   menuActivo = input.required<boolean>();
   modoPapelera = input<boolean>(false);
   modoCompartido = input<boolean>(false);
+  nivelPermiso = input<string>('lectura');
   mostrarInfoCompartido = input<boolean>(false);
 
   onDescargar = output<void>();
@@ -22,6 +23,8 @@ export class ArchivoCardComponent {
   onEliminarDefinitivo = output<Event>();
 
   onCompartir = output<Event>();
+  onComentar = output<Event>();
+  onRevocar = output<Event>();
 
   obtenerNombrePropietario(): string {
     const prop = this.archivo()?.propietario_id;

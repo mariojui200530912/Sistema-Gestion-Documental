@@ -3,6 +3,7 @@ import { Component, inject, input, output, signal } from '@angular/core';
 import { ArchivoService } from '../../../../core/services/archivo.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { CarpetaService } from '../../../../core/services/carpeta.service';
 
 @Component({
   selector: 'app-modal-archivo',
@@ -12,14 +13,14 @@ import { AuthService } from '../../../../core/services/auth.service';
 })
 export class ModalArchivo {
   private authService = inject(AuthService);
-  carpetaActualId = input<string | null>(null);
+  private archivoService = inject(ArchivoService);
+  private carpetaService = inject(CarpetaService);
+  private toastService = inject(ToastService);
 
   // Emisores para controlar la vista del padre
   onCerrar = output<void>();
   onGuardado = output<void>();
 
-  private archivoService = inject(ArchivoService);
-  private toastService = inject(ToastService);
 
   // Estado interno del modal
   archivoSeleccionado = signal<File | null>(null);
@@ -40,7 +41,7 @@ export class ModalArchivo {
     }
 
     this.subiendoArchivo.set(true);
-    const carpetaId = this.carpetaActualId();
+    const carpetaId = this.carpetaService.carpetaActualId();
 
     this.archivoService.subirArchivo(file, carpetaId).subscribe({
       next: () => {

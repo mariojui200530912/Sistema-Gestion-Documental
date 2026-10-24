@@ -49,8 +49,9 @@
             <select 
               formControlName="permiso"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-              <option value="lectura">👀 Lector (Solo puede ver y descargar)</option>
-              <option value="edicion">✏️ Editor (Puede modificar y organizar)</option>
+              <option value="lectura">Lector (Solo puede ver y descargar)</option>
+              <option value="edicion">Editor (Puede modificar y organizar)</option>
+              <option value="comentar">Comentador (Puede ingresar comentarios)</option>
             </select>
           </div>
           <button 
@@ -99,7 +100,13 @@
                   <div class="flex items-center flex-shrink-0">
                     <span class="px-2 py-1 text-xs font-medium rounded-full mr-3"
                           [ngClass]="acceso.nivel_permiso === 'edicion' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'">
-                      {{ acceso.nivel_permiso === 'edicion' ? 'Editor' : 'Lector' }}
+                      @if (acceso.nivel_permiso === 'lectura') {
+                        Lector
+                      } @else if (acceso.nivel_permiso === 'edicion') {
+                        Editor
+                      } @else {
+                        Comentador
+                      }
                     </span>
                     <button 
                       (click)="revocar(acceso.usuario_id._id)"

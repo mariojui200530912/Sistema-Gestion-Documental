@@ -31,9 +31,22 @@ export class MiUnidadComponent implements OnInit{
   esContextoCompartido = signal<boolean>(false);
   
   ngOnInit() {
-    this.esContextoCompartido.set(this.router.url.includes('compartidos'));
-
     this.route.queryParams.subscribe(params => {
+      // Detectar dinamicamente el contexto actual desde la URL
+      const esCompartido = this.router.url.includes('compartidos');
+      this.esContextoCompartido.set(esCompartido);
+
+      // Validar y limpiar el estado residual del CarpetaService
+      const nombreRaiz = esCompartido ? 'Compartidos Conmigo' : 'Mi Unidad';
+      const rutaGuardada = this.rutaActual(); // Lee el signal del servicio
+      
+      if (rutaGuardada.length === 0 || rutaGuardada[0].nombre !== nombreRaiz) {
+        // Resetea la navegación a la raiz correcta antes de cargar el contenido
+        this.carpetaService.rutaActual.set([{ id: null, nombre: nombreRaiz }]);
+        this.carpetaService.carpetaActualId.set(null);
+      }
+
+      // Flujo normal de carga de contenido
       if (params['id'] && params['nombre']) {
         this.carpetaService.obtenerContenidoCarpeta(params['id'], params['nombre']).subscribe();
       } else if (params['folder']) {
@@ -93,7 +106,8 @@ export class MiUnidadComponent implements OnInit{
     if (idPadre) {
       const ruta = this.rutaActual();
       const nombreCarpeta = ruta[ruta.length - 1].nombre;
-      this.carpetaService.obtenerContenidoCarpeta(idPadre, nombreCarpeta).subscribe();
+      const indiceActual = ruta.length - 1;
+      this.carpetaService.obtenerContenidoCarpeta(idPadre, nombreCarpeta, indiceActual).subscribe();
     } else {
       this.cargarRaiz();
     }

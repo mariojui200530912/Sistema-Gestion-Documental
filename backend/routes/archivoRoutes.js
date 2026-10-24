@@ -5,7 +5,9 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const uploadMiddleware = require('../middlewares/uploadMiddleware');
 const validarSubidaMiddleware = require('../middlewares/validarSubidaMiddleware');
 
-router.post('/upload', authMiddleware, validarSubidaMiddleware, (req, res, next) => {
+router.use(authMiddleware);
+
+router.post('/upload', validarSubidaMiddleware, (req, res, next) => {
     const uploadSingle = uploadMiddleware.single('archivo');
     uploadSingle(req, res, function (err) {
         if (err) {
@@ -15,8 +17,9 @@ router.post('/upload', authMiddleware, validarSubidaMiddleware, (req, res, next)
     });
 }, archivoController.subirArchivo);
 
-router.get('/descargar/:id', authMiddleware, archivoController.descargarArchivo);
-router.put('/renombrar/:id', authMiddleware, archivoController.renombrarArchivo);
-router.put('/mover/:id', authMiddleware, archivoController.moverArchivo);
+router.get('/descargar/:id', archivoController.descargarArchivo);
+router.put('/:id/renombrar', archivoController.renombrarArchivo);
+router.put('/:id/mover', archivoController.moverArchivo);
+router.post('/:id/comentarios', archivoController.agregarComentario);
 
 module.exports = router;

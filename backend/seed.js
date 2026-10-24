@@ -14,7 +14,7 @@ const poblarBaseDeDatos = async () => {
     await mongoose.connect(MONGODB_URI);
     console.log('Conectado a MongoDB para la carga inicial...');
 
-    // Limpiar las colecciones antes de insertar los datos iniciales
+    // Limpiar las colecciones
     await Usuario.deleteMany({});
     await Carpeta.deleteMany({});
     await Archivo.deleteMany({});
@@ -23,7 +23,7 @@ const poblarBaseDeDatos = async () => {
     await mongoose.connection.db.collection('fs.chunks').deleteMany({});
     console.log('Colecciones limpiadas exitosamente.');
 
-    // Limpiar usuarios existentes
+    // Crear usuarios
     const salt = await bcrypt.genSalt(10);
     const passHash = await bcrypt.hash('password123', salt);
 
@@ -38,71 +38,82 @@ const poblarBaseDeDatos = async () => {
     const usuariosRegulares = usuarios.filter(u => u.rol === 'usuario');
     console.log('✅ Usuarios creados.');
 
-   // Crear carpetas para cada usuario regular
-   const carpetas = [];
-   for (const usuario of usuariosRegulares) {
-      const carpetaPrincipal = await Carpeta.create({ 
+    // Crear carpetas asegurando la relación correcta con su propietario
+    const estructuraCarpetas = []; // Guardaremos { usuario, principal, subcarpeta }
+
+    for (const usuario of usuariosRegulares) {
+      const principal = await Carpeta.create({ 
         nombre: 'Carpeta Principal', 
         propietario_id: usuario._id,
         carpeta_padre_id: null
       });
-      carpetas.push(carpetaPrincipal);
 
-      const subCarpeta = await Carpeta.create({
+      const subcarpeta = await Carpeta.create({
         nombre: 'Subcarpeta 1', 
         propietario_id: usuario._id,
-        carpeta_padre_id: carpetaPrincipal._id
+        carpeta_padre_id: principal._id
       });
-      carpetas.push(subCarpeta);
-    }
-    console.log('✅ Carpetas creadas.');
 
-    // Crear archivos para cada carpeta
+      estructuraCarpetas.push({ usuario, principal, subcarpeta });
+    }
+    console.log('✅ Carpetas creadas y asignadas correctamente a sus dueños.');
+
     const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: 'fs' });
-    const archivos = [];
+    const archivosCreados = [];
     const historiales = [];
-    for (let i = 0; i < 50; i++) {
-      const propietario = usuariosRegulares[i % usuariosRegulares.length];
-      const carpetaAsignada = carpetas[i % carpetas.length];
-      const isMarkdown = i % 2 === 0; // Alternar entre archivos de texto y markdown
-      const extension = isMarkdown ? 'md' : 'txt';
-      const mimeType = isMarkdown ? 'text/markdown' : 'text/plain';
 
-      const nombreArchivo = `archivo_prueba_${i}.${extension}`;
-      const contenido =  `Este es el contenido autogenerado para el archivo ${nombreArchivo}`;
-      const uploadStream = bucket.openUploadStream(nombreArchivo, { contentType: mimeType });
-      uploadStream.end(contenido);
-      await new Promise((resolve) => uploadStream.on('finish', resolve));
+    // Crear 18 archivos por cada usuario (Total: 54 archivos)
+    for (const info of estructuraCarpetas) {
+      // Alternamos entre la carpeta principal y la subcarpeta para tener variedad
+      const carpetaDestino = Math.random() > 0.5 ? info.principal : info.subcarpeta;
+      
+      for (let i = 0; i < 18; i++) {
+        const isMarkdown = i % 2 === 0;
+        const extension = isMarkdown ? 'md' : 'txt';
+        const mimeType = isMarkdown ? 'text/markdown' : 'text/plain';
+        const nombreArchivo = `archivo_${info.usuario.nombres.toLowerCase()}_${i}.${extension}`;
+        const contenido = `Este es el contenido del archivo ${nombreArchivo}`;
+        
+        // Subir a GridFS
+        const uploadStream = bucket.openUploadStream(nombreArchivo, { contentType: mimeType });
+        uploadStream.end(contenido);
+        await new Promise((resolve) => uploadStream.on('finish', resolve));
 
-      // Crear documento en la colección Archivos
-      const nuevoArchivo = await Archivo.create({
-        nombre: nombreArchivo,
-        tipo_archivo: mimeType,
-        tamano: Buffer.byteLength(contenido),
-        propietario_id: propietario._id,
-        carpeta_id: carpetaAsignada._id,
-        gridfs_id: uploadStream.id
-      });
-      archivos.push(nuevoArchivo);
+        // Registrar en la colección
+        const nuevoArchivo = await Archivo.create({
+          nombre: nombreArchivo,
+          tipo_archivo: mimeType,
+          tamano: Buffer.byteLength(contenido),
+          propietario_id: info.usuario._id,
+          carpeta_id: carpetaDestino._id, // <-- AQUÍ ESTÁ LA CORRECCIÓN: Carpeta del mismo dueño
+          gridfs_id: uploadStream.id
+        });
+        
+        archivosCreados.push(nuevoArchivo);
 
-      // Generar Historial de creacion
-      historiales.push({
-        usuario_id: propietario._id,
-        recurso_id: nuevoArchivo._id,
-        tipo_recurso: 'archivo',
-        accion: 'creacion'
-      });
+        historiales.push({
+          usuario_id: info.usuario._id,
+          recurso_id: nuevoArchivo._id,
+          tipo_recurso: 'archivo',
+          accion: 'creacion'
+        });
 
-      // Sumar espacio al usuario
-      await Usuario.findByIdAndUpdate(propietario._id, { $inc: { espacioUtilizado: nuevoArchivo.tamano } });
+        await Usuario.findByIdAndUpdate(info.usuario._id, { $inc: { espacioUtilizado: nuevoArchivo.tamano } });
+      }
     }
-    console.log('50 Archivos creados físicamente en GridFS y registrados.');
+    console.log(`✅ ${archivosCreados.length} Archivos creados físicamente y registrados.`);
 
+    // Compartir archivos de forma equitativa
     const permisosDisponibles = ['lectura', 'edicion', 'comentar'];
-    for (let i = 0; i < 20; i++) {
-      const archivoTarget = archivos[i]; // Tomamos los primeros 20 archivos
-      const beneficiario = usuariosRegulares.find(u => u._id.toString() !== archivoTarget.propietario_id.toString());
-      const nivel = permisosDisponibles[i % 3];
+    let contadorCompartidos = 0;
+
+    for (let i = 0; i < 30; i++) { // Compartiremos 30 archivos al azar
+      const archivoTarget = archivosCreados[i];
+      
+      // Buscar un beneficiario que NO sea el dueño del archivo
+      const beneficiariosPosibles = usuariosRegulares.filter(u => u._id.toString() !== archivoTarget.propietario_id.toString());
+      const beneficiario = beneficiariosPosibles[Math.floor(Math.random() * beneficiariosPosibles.length)];
+      const nivel = permisosDisponibles[Math.floor(Math.random() * permisosDisponibles.length)];
 
       archivoTarget.accesos.push({ usuario_id: beneficiario._id, nivel_permiso: nivel });
       await archivoTarget.save();
@@ -114,11 +125,13 @@ const poblarBaseDeDatos = async () => {
         accion: 'compartir',
         detalles: `Compartido con ${beneficiario.correo} (${nivel})`
       });
+      contadorCompartidos++;
     }
-    console.log('✅ 20 Operaciones de compartición realizadas.');
+    console.log(`✅ ${contadorCompartidos} Operaciones de compartición realizadas (repartidas al azar).`);
 
-    for (let i = 45; i < 50; i++) { // Mandamos a papelera los últimos 5 archivos
-      const archivoEliminado = archivos[i];
+    // Mandar a papelera los últimos 10 archivos
+    for (let i = archivosCreados.length - 10; i < archivosCreados.length; i++) {
+      const archivoEliminado = archivosCreados[i];
       archivoEliminado.estado = 'papelera';
       await archivoEliminado.save();
 
@@ -129,12 +142,12 @@ const poblarBaseDeDatos = async () => {
         accion: 'eliminacion'
       });
     }
-    console.log('✅ Elementos enviados a la papelera.');
+    console.log('✅ 10 Elementos enviados a la papelera.');
 
     await HistorialActividad.insertMany(historiales);
     console.log('✅ Historial de actividades guardado.');
 
-    console.log('🎉 Carga inicial completada con éxito. El sistema cumple con todos los requisitos.');
+    console.log('🎉 Carga inicial completada con éxito. Los datos están 100% coherentes.');
     process.exit();
   } catch (error) {
     console.error('❌ Error poblando la base de datos:', error);

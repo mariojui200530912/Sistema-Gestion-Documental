@@ -89,11 +89,13 @@ class ComparticionService {
 
             if (indiceAcceso >= 0) {
                 recurso.accesos[indiceAcceso].nivel_permiso = nivelPermiso;
+                recurso.markModified('accesos');
             } else {
                 recurso.accesos.push({ usuario_id: beneficiario._id, nivel_permiso: nivelPermiso });
             }
 
             await recurso.save({ session });
+            await recurso.populate('accesos.usuario_id', 'nombres apellidos correo');
 
             if (tipoRecurso === 'carpeta') {
                 await this._compartirRecursivo(recurso._id, beneficiario._id, nivelPermiso, session);
@@ -121,9 +123,16 @@ class ComparticionService {
 
     async revocar(idRecurso, tipoRecurso, idUsuarioRevocar, propietarioId) {
         const Modelo = tipoRecurso === 'archivo' ? Archivo : Carpeta;
-        const recurso = await Modelo.findOne({ _id: idRecurso, propietario_id: propietarioId });
+        const recurso = await Modelo.findOne({ _id: idRecurso });
 
         if (!recurso) throw new Error('RECURSO_NO_ENCONTRADO');
+
+        const esPropietario = recurso.propietario_id.toString() === propietarioId;
+        const esAutoRevocacion = propietarioId === idUsuarioRevocar;
+
+        if (!esPropietario && !esAutoRevocacion) {
+            throw new Error('RECURSO_NO_ENCONTRADO');
+        }
 
         const accesosIniciales = recurso.accesos.length;
         recurso.accesos = recurso.accesos.filter(a => a.usuario_id.toString() !== idUsuarioRevocar);
@@ -153,10 +162,10 @@ class ComparticionService {
     }
 
     async obtenerCompartidosConmigo(miId) {
-        const archivos = await Archivo.find({ 'accesos.usuario_id': miId, estado: 'activo' })
+        const archivos = await Archivo.find({ 'accesos.usuario_id': miId, propietario_id: { $ne: miId }, estado: 'activo' })
                                       .populate('propietario_id', 'nombres apellidos correo');
                                       
-        const carpetas = await Carpeta.find({ 'accesos.usuario_id': miId, estado: 'activo' })
+        const carpetas = await Carpeta.find({ 'accesos.usuario_id': miId, propietario_id: { $ne: miId }, estado: 'activo' })
                                       .populate('propietario_id', 'nombres apellidos correo');
 
         return { carpetas, archivos };

@@ -2,12 +2,10 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { ComparticionService } from '../../../../core/services/comparticion.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { CommonModule } from '@angular/common';
-import { CarpetaCardComponent } from '../../../../shared/components/carpeta-card/carpeta-card.component';
-import { ArchivoCardComponent } from '../../../../shared/components/archivo-card/archivo-card.component';
 import { Router } from '@angular/router';
 import { ArchivoService } from '../../../../core/services/archivo.service';
-import { AuthService } from '../../../../core/services/auth.service';
 import { ExploradorArchivosComponent } from '../../../../shared/components/explorador-archivos/explorador-archivos.component';
+import { CarpetaService } from '../../../../core/services/carpeta.service';
 
 @Component({
   selector: 'app-compartidos',
@@ -19,6 +17,7 @@ import { ExploradorArchivosComponent } from '../../../../shared/components/explo
 export class CompartidosComponent implements OnInit{
   private comparticionService = inject(ComparticionService);
   private archivoService = inject(ArchivoService); 
+  private carpetaService = inject(CarpetaService);
   private toastService = inject(ToastService);
   private router = inject(Router);
 
@@ -26,7 +25,6 @@ export class CompartidosComponent implements OnInit{
   carpetas = signal<any[]>([]);
   archivos = signal<any[]>([]);
   cargando = signal<boolean>(true);
-
   rutaActual = signal([{ nombre: 'Compartidos Conmigo', id: null }]);
 
   ngOnInit() {
@@ -35,6 +33,7 @@ export class CompartidosComponent implements OnInit{
 
   cargarCompartidos() {
     this.cargando.set(true);
+    this.rutaActual.set([{ nombre: 'Compartidos Conmigo', id: null }]);
     this.comparticionService.obtenerCompartidosConmigo().subscribe({
       next: (res) => {
         this.carpetas.set(res.carpetas || []);
@@ -49,11 +48,16 @@ export class CompartidosComponent implements OnInit{
   }
 
   abrirCarpeta(carpeta: any) {
-    this.router.navigate(['/dashboard/compartidos/carpeta'], { 
-      queryParams: { 
-        id: carpeta._id, 
-        nombre: carpeta.nombre 
-      } 
+    this.cargando.set(true);
+    this.rutaActual.update(ruta => [...ruta, { id: carpeta._id, nombre: carpeta.nombre }]);
+    
+    this.carpetaService.obtenerContenidoCarpeta(carpeta._id, carpeta.nombre).subscribe({
+      next: (res: any) => {
+         this.carpetas.set(res.contenido.carpetas || []);
+         this.archivos.set(res.contenido.archivos || []);
+         this.cargando.set(false);
+      },
+      error: () => this.cargando.set(false)
     });
   }
 
@@ -77,6 +81,19 @@ export class CompartidosComponent implements OnInit{
   }
 
   navegarBreadcrumb(index: number, id: string | null) {
-    this.cargarCompartidos();
+    if (id === null) {
+      this.cargarCompartidos();
+    } else {
+      this.cargando.set(true);
+      this.rutaActual.update(ruta => ruta.slice(0, index + 1));
+      this.carpetaService.obtenerContenidoCarpeta(id, '').subscribe({
+        next: (res: any) => {
+           this.carpetas.set(res.contenido.carpetas || []);
+           this.archivos.set(res.contenido.archivos || []);
+           this.cargando.set(false);
+        },
+        error: () => this.cargando.set(false)
+      });
+    }
   }
 }

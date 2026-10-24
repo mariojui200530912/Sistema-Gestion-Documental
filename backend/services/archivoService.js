@@ -203,6 +203,45 @@ class ArchivoService {
             throw error;
         }
     }
+
+    async agregarComentario(archivoId, usuarioActual, texto) {
+        const archivo = await Archivo.findById(archivoId);
+        
+        if (!archivo) {
+            throw new Error('ARCHIVO_NO_ENCONTRADO');
+        }
+
+        // Validar permisos (Propietario, edicion o comentar)
+        const esPropietario = archivo.propietario_id.toString() === usuarioActual;
+        const acceso = archivo.accesos.find(a => a.usuario_id.toString() === usuarioActual);
+        const tienePermiso = esPropietario || (acceso && ['edicion', 'comentar'].includes(acceso.nivel_permiso));
+
+        if (!tienePermiso) {
+            throw new Error('PERMISO_DENEGADO');
+        }
+
+        // Agregar comentario embebido
+        archivo.comentarios.push({
+            usuario_id: usuarioActual,
+            texto: texto
+        });
+
+        await archivo.save();
+
+        // Registrar en historial
+        await HistorialActividad.create({
+            usuario_id: usuarioActual,
+            accion: 'comentar',
+            tipo_recurso: 'archivo',
+            recurso_id: archivo._id
+        });
+
+        // Devolver los comentarios actualizados con los datos del usuario poblados
+        const archivoActualizado = await Archivo.findById(archivoId)
+            .populate('comentarios.usuario_id', 'nombres apellidos correo');
+            
+        return archivoActualizado.comentarios;
+    }
 }
 
 module.exports = new ArchivoService();

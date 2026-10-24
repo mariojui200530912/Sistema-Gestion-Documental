@@ -10,6 +10,9 @@ import { ModalRenombrar } from '../modals/modal-renombrar/modal-renombrar';
 import { AuthService } from '../../../core/services/auth.service';
 import { ModalConfirmacionComponent } from '../modals/modal-confirmacion/modal-confirmacion.component';
 import { FormsModule } from '@angular/forms';
+import { ModalComentarioComponent } from '../modals/modal-comentarios/modal-comentario.component';
+import { ComparticionService } from '../../../core/services/comparticion.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-explorador-archivos',
@@ -22,6 +25,7 @@ import { FormsModule } from '@angular/forms';
     ModalMover,
     ModalConfirmacionComponent,
     ModalCompartirComponent,
+    ModalComentarioComponent,
     ModalArchivo,
     ModalCarpeta
   ],
@@ -31,6 +35,8 @@ import { FormsModule } from '@angular/forms';
 export class ExploradorArchivosComponent {
   private authService = inject(AuthService);
   usuario = this.authService.usuarioActual;
+  private comparticionService = inject(ComparticionService);
+  private toastService = inject(ToastService);
 
   // --- DATOS RECIBIDOS DEL PADRE ---
   carpetas = input.required<any[]>();
@@ -62,6 +68,7 @@ export class ExploradorArchivosComponent {
   mostrarModalMover = signal<boolean>(false);
   mostrarModalConfirmacion = signal<boolean>(false);
   mostrarModalCompartir = signal<boolean>(false);
+  mostrarModalComentarios = signal<boolean>(false);
 
   // --- CONTROL DE MENUS Y PERMISOS ---
   toggleMenu(event: Event, id: string) {
@@ -172,6 +179,41 @@ export class ExploradorArchivosComponent {
     this.filtroFechaFin.set('');
   }
 
+  obtenerNivelPermiso(item: any): string {
+    const miId = this.authService.usuarioActual()?.id;
+    
+    const idPropietario = item.propietario_id?._id || item.propietario_id;
+    
+    if (idPropietario === miId) {
+      return 'propietario';
+    }
+    
+    const acceso = item.accesos?.find((a: any) => {
+      const idUsuarioAcceso = a.usuario_id?._id || a.usuario_id;
+      return idUsuarioAcceso === miId;
+    });
+    
+    return acceso ? acceso.nivel_permiso : 'lectura';
+  }
+
+  quitarAcceso(event: Event, item: any, tipo: 'carpeta' | 'archivo') {
+    event.stopPropagation();
+    this.cerrarMenus();
+
+    const miId = this.usuario()?.id;
+    if (!miId) return;
+
+    this.comparticionService.revocarPermiso(item._id, tipo, miId).subscribe({
+      next: () => {
+        this.toastService.mostrarExito('Te has quitado el acceso a este elemento');
+        this.recargarVista(); 
+      },
+      error: () => {
+        this.toastService.mostrarError('Error al intentar quitar el acceso');
+      }
+    });
+  }
+
   // --- APERTURA DE MODALES ---
   abrirModalRenombrar(event: Event, item: any, tipo: 'carpeta' | 'archivo') {
     event.stopPropagation();
@@ -203,6 +245,12 @@ export class ExploradorArchivosComponent {
     this.itemSeleccionado.set(item);
     this.tipoItemSeleccionado.set(tipo);
     this.mostrarModalCompartir.set(true);
+  }
+
+  abrirModalComentarios(event: Event, archivo: any) {
+    event.stopPropagation();
+    this.itemSeleccionado.set(archivo);
+    this.mostrarModalComentarios.set(true);
   }
 
   abrirModalArchivo() {

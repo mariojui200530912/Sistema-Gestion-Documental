@@ -21,6 +21,7 @@
               [carpeta]="carpeta"
               [menuActivo]="menuActivoId() === carpeta._id"
               [modoPapelera]="true"
+              [nivelPermiso]="'propietario'" 
               (onToggleMenu)="toggleMenu($event, carpeta._id)"
               (onRestaurar)="restaurar($event, carpeta._id, 'carpeta')"
               (onEliminarDefinitivo)="abrirModalEliminar($event, carpeta, 'carpeta')">
@@ -38,9 +39,10 @@
               [archivo]="archivo"
               [menuActivo]="menuActivoId() === archivo._id"
               [modoPapelera]="true"
+              [nivelPermiso]="'propietario'"
               (onToggleMenu)="toggleMenu($event, archivo._id)"
               (onRestaurar)="restaurar($event, archivo._id, 'archivo')"
-              (onEliminarDefinitivo)="abrirModalEliminar($event, archivo, 'carpeta')">
+              (onEliminarDefinitivo)="abrirModalEliminar($event, archivo, 'archivo')"> 
             </app-archivo-card>
           }
         </div>

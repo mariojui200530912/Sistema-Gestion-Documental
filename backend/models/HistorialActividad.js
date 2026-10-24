@@ -5,7 +5,7 @@ const historialActividadSchema = new mongoose.Schema({
     recurso_id: { type: mongoose.Schema.Types.ObjectId, required: true },
     tipo_recurso: { type: String, enum: ['archivo', 'carpeta'], required: true },
     accion: { type: String, 
-        enum: ['creacion', 'lectura', 'edicion', 'eliminacion', 'restauracion', 'compartir', 'descarga'], 
+        enum: ['creacion', 'lectura', 'edicion', 'eliminacion', 'restauracion', 'compartir', 'descarga', 'comentar'], 
         required: true 
     },
     detalles: { type: String }

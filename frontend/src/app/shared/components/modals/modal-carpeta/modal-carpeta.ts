@@ -11,15 +11,14 @@ import { ToastService } from '../../../../core/services/toast.service';
   styleUrl: './modal-carpeta.css',
 })
 export class ModalCarpeta {
-  carpetaActualId = input<string | null>(null);
+  private carpetaService = inject(CarpetaService);
+  private toastService = inject(ToastService);
+  private fb = inject(FormBuilder);
 
   // Emisores para el componente padre
   onCerrar = output<void>();
   onGuardado = output<void>();
 
-  private carpetaService = inject(CarpetaService);
-  private toastService = inject(ToastService);
-  private fb = inject(FormBuilder);
 
   // Estado del formulario y del proceso de guardado
   guardando = signal<boolean>(false);
@@ -36,7 +35,7 @@ export class ModalCarpeta {
 
     this.guardando.set(true);
     const nombreCarpeta = this.carpetaForm.value.nombre!;
-    const idPadre = this.carpetaActualId();
+    const idPadre = this.carpetaService.carpetaActualId();
 
     this.carpetaService.crearCarpeta(nombreCarpeta, idPadre).subscribe({
       next: () => {

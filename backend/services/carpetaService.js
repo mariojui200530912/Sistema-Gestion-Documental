@@ -30,8 +30,12 @@ class CarpetaService {
 
         if (!carpeta) throw new Error('CARPETA_NO_ENCONTRADA');
 
-        const subcarpetas = await Carpeta.find({ carpeta_padre_id: carpetaId, estado: 'activo' });
-        const archivos = await Archivo.find({ carpeta_id: carpetaId, estado: 'activo' });
+        const subcarpetas = await Carpeta.find({ carpeta_padre_id: carpetaId, estado: 'activo' })
+                .populate('propietario_id', 'nombres apellidos correo')
+                .populate('comentarios.usuario_id', 'nombres apellidos correo');
+        const archivos = await Archivo.find({ carpeta_id: carpetaId, estado: 'activo' })
+                .populate('propietario_id', 'nombres apellidos correo')
+                .populate('comentarios.usuario_id', 'nombres apellidos correo');
 
         return { carpetaActual: carpeta, carpetas: subcarpetas, archivos };
     }
@@ -127,7 +131,7 @@ class CarpetaService {
 
     async renombrar(idCarpeta, nuevoNombre, usuarioId) {
         const carpeta = await Carpeta.findOne({
-            _id: carpetaId,
+            _id: idCarpeta,
             estado: 'activo',
             $or: [
                 { propietario_id: usuarioId },
@@ -173,18 +177,18 @@ class CarpetaService {
 
     async mover(idCarpeta, nuevaCarpetaPadreId, usuarioId) {
         const carpeta = await Carpeta.findOne({
-            _id: carpetaId,
+            _id: idCarpeta,
             estado: 'activo',
             $or: [
                 { propietario_id: usuarioId },
                 { accesos: { $elemMatch: { usuario_id: usuarioId, nivel_permiso: 'edicion' } } }
             ]
         });
-        if (!carpetaMover) throw new Error('CARPETA_NO_ENCONTRADA');
+        if (!carpeta) throw new Error('CARPETA_NO_ENCONTRADA');
 
         // Regla de negocio: No se puede mover a la misma carpeta donde ya esta
-        if (String(carpetaMover.carpeta_padre_id) === String(nuevaCarpetaPadreId)) {
-            return carpetaMover; // No hay cambios, retornamos silenciosamente
+        if (String(carpeta.carpeta_padre_id) === String(nuevaCarpetaPadreId)) {
+            return carpeta; // No hay cambios, retornamos silenciosamente
         }
 
         // Regla de negocio: Prevenir ciclos verificando el árbol hacia arriba
@@ -204,10 +208,11 @@ class CarpetaService {
         }
 
         const carpetaExistente = await Carpeta.findOne({
-            nombre: carpetaMover.nombre, // Usamos el nombre de la carpeta que estamos moviendo
+            nombre: carpeta.nombre, // Usamos el nombre de la carpeta que estamos moviendo
             carpeta_padre_id: nuevaCarpetaPadreId || null,
             propietario_id: usuarioId,
-            estado: 'activo'
+            estado: 'activo',
+            _id: { $ne: idCarpeta }
         });
 
         if (carpetaExistente) {
@@ -217,22 +222,48 @@ class CarpetaService {
         const session = await mongoose.startSession();
         session.startTransaction();
         try {
-            carpetaMover.carpeta_padre_id = nuevaCarpetaPadreId || null;
-            await carpetaMover.save({ session });
+            carpeta.carpeta_padre_id = nuevaCarpetaPadreId || null;
+            await carpeta.save({ session });
 
             await HistorialActividad.create([{
-                usuario_id: usuarioId, recurso_id: carpetaMover._id, tipo_recurso: 'carpeta',
+                usuario_id: usuarioId, recurso_id: carpeta._id, tipo_recurso: 'carpeta',
                 accion: 'edicion', detalles: 'Carpeta movida de ubicación'
             }], {session});
             await session.commitTransaction();
             session.endSession();
 
-            return carpetaMover;
+            return carpeta;
         } catch (error) {
             await session.abortTransaction();
             session.endSession();
             throw error;
         }
+    }
+
+    async agregarComentario(carpetaId, usuarioActual, texto) {
+        const carpeta = await Carpeta.findById(carpetaId);
+        if (!carpeta) throw new Error('CARPETA_NO_ENCONTRADA');
+
+        const esPropietario = carpeta.propietario_id.toString() === usuarioActual;
+        const acceso = carpeta.accesos.find(a => a.usuario_id.toString() === usuarioActual);
+        const tienePermiso = esPropietario || (acceso && ['edicion', 'comentar'].includes(acceso.nivel_permiso));
+
+        if (!tienePermiso) throw new Error('PERMISO_DENEGADO');
+
+        carpeta.comentarios.push({ usuario_id: usuarioActual, texto: texto });
+        await carpeta.save();
+
+        await HistorialActividad.create({
+            usuario_id: usuarioActual,
+            accion: 'comentar',
+            tipo_recurso: 'carpeta',
+            recurso_id: carpeta._id
+        });
+
+        const carpetaActualizada = await Carpeta.findById(carpetaId)
+            .populate('comentarios.usuario_id', 'nombres apellidos correo');
+            
+        return carpetaActualizada.comentarios;
     }
 }
 

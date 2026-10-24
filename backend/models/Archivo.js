@@ -9,7 +9,12 @@ const archivoSchema = new mongoose.Schema({
     estado: { type: String, enum: ['activo', 'papelera'], default: 'activo' },
     tamano: { type: Number, required: true },
     tipo_archivo: { type: String, required: true },
-    accesos: [accesoSchema]
+    accesos: [accesoSchema],
+    comentarios: [{
+        usuario_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', required: true },
+        texto: { type: String, required: true },
+        fecha: { type: Date, default: Date.now }
+    }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Archivo', archivoSchema);

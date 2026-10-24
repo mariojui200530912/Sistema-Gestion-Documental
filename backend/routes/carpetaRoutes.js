@@ -17,5 +17,6 @@ router.post('/', carpetaController.crearCarpeta);
 // Rutas PUT (Actualizaciones)
 router.put('/:id/renombrar', carpetaController.renombrarCarpeta);
 router.put('/:id/mover', carpetaController.moverCarpeta);
+router.post('/:id/comentarios', carpetaController.agregarComentario);
 
 module.exports = router;

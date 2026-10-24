@@ -2,23 +2,27 @@
   
   <!-- INSIGNIA DE PERMISO (Visible siempre en Compartidos) -->
   @if (mostrarInfoCompartido()) {
-    <div class="absolute top-3 left-3 z-10">
-      @if (!modoCompartido()) {
-        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-green-100 text-green-800 border border-green-200 shadow-xs" title="Tienes permisos de edición">
-          Editor
-        </span>
-      } @else {
-        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="Solo lectura">
-          Lector
-        </span>
-      }
-    </div>
+  <div class="absolute top-3 left-3 z-10">
+    @if (nivelPermiso() === 'edicion') {
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-green-100 text-green-800 border border-green-200 shadow-xs" title="Tienes permisos de edición">
+        Editor
+      </span>
+    } @else if (nivelPermiso() === 'comentar') {
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200 shadow-xs" title="Puedes dejar comentarios">
+        Comentador
+      </span>
+    } @else {
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="Solo lectura">
+        Lector
+      </span>
+    }
+  </div>
   }
 
   <!-- BOTÓN DE 3 PUNTOS -->
-  @if (!modoCompartido() || modoPapelera()) {
+  @if (nivelPermiso() !== 'lectura') {
     <button 
-      (click)="onToggleMenu.emit($event)"
+      (click)="onToggleMenu.emit($event); $event.stopPropagation()"
       class="absolute top-2 right-2 p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-200/70 bg-white/80 backdrop-blur-xs opacity-85 group-hover:opacity-100 transition-all focus:outline-none z-10 shadow-2xs"
       title="Opciones">
       <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -62,30 +66,58 @@
   <!-- MENÚ DESPLEGABLE -->
   @if (menuActivo()) {
     <div class="absolute right-2 top-10 w-52 bg-white border border-gray-200 rounded-lg shadow-xl z-30 py-1" (click)="$event.stopPropagation()">
+      
       @if (!modoPapelera()) {
-        <!-- MENÚ NORMAL -->
-        <button (click)="onCompartir.emit($event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
-          <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-          Compartir
+        
+        <!-- COMPARTIR: Solo Propietario -->
+        @if (nivelPermiso() === 'propietario') {
+          <button (click)="onCompartir.emit($event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+            <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+            Compartir
+          </button>
+        }  
+        
+        <!-- COMENTARIOS: Propietario, Edición y Comentador -->
+        <button (click)="onComentar.emit($event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+          <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+          </svg>
+          Comentarios
         </button>
+        
+        <!-- RENOMBRAR: Propietario y Edición -->
+        @if (nivelPermiso() === 'edicion' || nivelPermiso() === 'propietario') {  
+          <button (click)="onRenombrar.emit($event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            Renombrar
+          </button>
+        }
 
-        <button (click)="onRenombrar.emit($event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
-          <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-          Renombrar
-        </button>
+        <!-- MOVER: Solo Propietario -->
+        @if (nivelPermiso() === 'propietario') {
+          <button (click)="onMover.emit($event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+            Mover
+          </button>
+        }
 
-        <button (click)="onMover.emit($event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
-          <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-          Mover
-        </button>
+        @if (nivelPermiso() !== 'comentar') {
+          <div class="border-t border-gray-100 my-1"></div>
 
-        <div class="border-t border-gray-100 my-1"></div>
-
-        <button (click)="onEliminar.emit($event)" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-          Eliminar
-        </button>
+          @if (nivelPermiso() === 'propietario') {
+            <button (click)="onEliminar.emit($event)" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              Eliminar
+            </button>
+          } @else if (nivelPermiso() === 'edicion') {
+            <button (click)="onRevocar.emit($event)" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zm11-2h-4v-2h4v2z"></path></svg>
+              Quitar de compartidos
+            </button>
+          }
+        }
       } @else {
+        
         <!-- MENÚ PAPELERA -->
         <button (click)="onRestaurar.emit($event)" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center">
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
@@ -95,7 +127,8 @@
         <button (click)="onEliminarDefinitivo.emit($event)" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
           Eliminar definitivamente
-        </button>
+        </button> 
+        
       }
     </div>
   }
