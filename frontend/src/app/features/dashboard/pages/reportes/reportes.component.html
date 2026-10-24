@@ -9,7 +9,7 @@
         </svg>
         Panel de Reportes y Analíticas
       </h2>
-      <p class="text-sm text-gray-500 mt-1">Consultas avanzadas de almacenamiento, usuarios, compartición y actividad con filtros.</p>
+      <p class="text-sm text-gray-500 mt-1">Consultas avanzadas de almacenamiento, usuarios y compartición con filtros.</p>
     </div>
   </div>
 
@@ -40,13 +40,6 @@
           }
         </select>
       </div>
-      <div>
-        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Agrupar Período Actividad</label>
-        <select [ngModel]="periodoActividad()" (ngModelChange)="periodoActividad.set($event)" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-          <option value="dia">Por Día</option>
-          <option value="mes">Por Mes</option>
-        </select>
-      </div>
       <div class="flex gap-2">
         <button (click)="aplicarFiltros()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-xs">
           Aplicar Filtros
@@ -66,12 +59,15 @@
       <!-- SECCIÓN 1: ARCHIVOS Y ALMACENAMIENTO -->
       <div class="mb-8">
         <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">📁 Reportes de Archivos y Almacenamiento</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- PRIMERA FILA -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           
           <!-- Tipos de Archivo -->
-          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
-            <h4 class="text-sm font-bold text-gray-700 mb-3">Agrupados por Tipo</h4>
-            <div class="space-y-3">
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl flex flex-col">
+            <h4 class="text-sm font-bold text-gray-700 mb-3 flex-shrink-0">Agrupados por Tipo</h4>
+            <!-- Se agregó max-h-64 y overflow-y-auto -->
+            <div class="space-y-3 overflow-y-auto max-h-64 pr-2">
               @for (tipo of datosArchivos().agrupadosPorTipo; track tipo._id) {
                 <div>
                   <div class="flex justify-between text-xs font-medium text-gray-600 mb-1">
@@ -87,9 +83,10 @@
           </div>
 
           <!-- Archivos en Rango de Fechas -->
-          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
-            <h4 class="text-sm font-bold text-gray-700 mb-3">Creados en Rango ({{ datosArchivos().totalArchivosRango }})</h4>
-            <ul class="space-y-2 max-h-48 overflow-y-auto">
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl flex flex-col">
+            <h4 class="text-sm font-bold text-gray-700 mb-3 flex-shrink-0">Creados en Rango ({{ datosArchivos().totalArchivosRango }})</h4>
+            <!-- Se agregó max-h-64 y overflow-y-auto -->
+            <ul class="space-y-2 overflow-y-auto max-h-64 pr-2">
               @for (arch of datosArchivos().archivosEnRango; track arch._id) {
                 <li class="text-xs flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                   <span class="font-medium text-gray-800 truncate mr-2" [title]="arch.nombre">{{ arch.nombre }}</span>
@@ -102,9 +99,10 @@
           </div>
 
           <!-- Más Activos -->
-          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
-            <h4 class="text-sm font-bold text-gray-700 mb-3">Archivos con Más Operaciones</h4>
-            <ul class="space-y-2">
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl flex flex-col">
+            <h4 class="text-sm font-bold text-gray-700 mb-3 flex-shrink-0">Archivos con Más Operaciones</h4>
+            <!-- Se agregó max-h-64 y overflow-y-auto -->
+            <ul class="space-y-2 overflow-y-auto max-h-64 pr-2">
               @for (arch of datosArchivos().archivosMasActivos; track arch._id) {
                 <li class="text-xs flex justify-between items-center bg-gray-50 p-2 rounded-lg">
                   <span class="font-medium text-gray-800 truncate mr-2">{{ arch.archivoInfo.nombre }}</span>
@@ -116,8 +114,43 @@
             </ul>
           </div>
         </div>
-      </div>
 
+        <!-- SEGUNDA FILA DE ARCHIVOS Y ALMACENAMIENTO -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl flex flex-col">
+            <h4 class="text-sm font-bold text-gray-700 mb-3 flex-shrink-0">Carpetas con Más Archivos</h4>
+            <!-- Se agregó max-h-64 y overflow-y-auto -->
+            <ul class="space-y-2 overflow-y-auto max-h-64 pr-2">
+              @for (carp of datosArchivos().carpetasMasLlenas; track carp._id) {
+                <li class="text-xs flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                  <span class="font-medium text-gray-800 truncate mr-2">{{ carp.carpeta?.nombre }}</span>
+                  <span class="bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">{{ carp.totalArchivos }} arch.</span>
+                </li>
+              } @empty {
+                <li class="text-xs text-gray-400 italic">No hay carpetas creadas.</li>
+              }
+            </ul>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl flex flex-col">
+            <h4 class="text-sm font-bold text-gray-700 mb-3 flex-shrink-0">Archivos Nunca Compartidos</h4>
+            <!-- Se agregó max-h-64 y overflow-y-auto -->
+            <ul class="space-y-2 overflow-y-auto max-h-64 pr-2">
+              @for (arch of datosArchivos().archivosNoCompartidos; track arch._id) {
+                <li class="text-xs flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                  <span class="font-medium text-gray-800 truncate mr-2">{{ arch.nombre }}</span>
+                  <span class="text-gray-500 flex-shrink-0">De: {{ arch.propietario?.nombres }}</span>
+                </li>
+              } @empty {
+                <li class="text-xs text-gray-400 italic">Todos los archivos han sido compartidos.</li>
+              }
+            </ul>
+          </div>
+          
+        </div>
+      </div>
+      
       <!-- SECCIÓN 2: REPORTE DE USUARIOS -->
       <div class="mb-8">
         <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">👥 Reportes de Usuarios</h3>
@@ -205,57 +238,6 @@
               </ul>
             }
           </div>
-        </div>
-      </div>
-
-      <!-- SECCIÓN 4: REPORTE DE ACTIVIDAD -->
-      <div class="mb-8">
-        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">⚡ Reportes de Actividad y Bitácora</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
-            <h4 class="text-sm font-bold text-gray-700 mb-3">Operaciones por Período</h4>
-            <ul class="space-y-1.5 max-h-48 overflow-y-auto">
-              @for (p of datosActividad().operacionesPorPeriodo; track p._id) {
-                <li class="text-xs flex justify-between items-center bg-gray-50 px-3 py-1.5 rounded">
-                  <span class="font-medium text-gray-700">{{ p._id }}</span>
-                  <span class="font-bold text-indigo-600">{{ p.total }} ops</span>
-                </li>
-              } @empty {
-                <li class="text-xs text-gray-400 italic">Sin datos para este período.</li>
-              }
-            </ul>
-          </div>
-
-          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
-            <h4 class="text-sm font-bold text-gray-700 mb-3">Operaciones por Tipo y Acción</h4>
-            <ul class="space-y-1.5">
-              @for (acc of datosActividad().accionesGenerales; track acc._id) {
-                <li class="text-xs flex justify-between items-center bg-gray-50 px-3 py-1.5 rounded">
-                  <span class="font-medium text-gray-700 capitalize">{{ acc._id.recurso }} - {{ acc._id.accion }}</span>
-                  <span class="font-bold text-blue-600">{{ acc.totalAcciones }}</span>
-                </li>
-              }
-            </ul>
-          </div>
-
-          <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-2xl">
-            <h4 class="text-sm font-bold text-gray-700 mb-3">Bitácora / Historial Filtrado</h4>
-            <ul class="space-y-2 max-h-48 overflow-y-auto">
-              @for (h of datosActividad().historialFiltrado; track h._id) {
-                <li class="text-xs bg-gray-50 p-2 rounded-lg">
-                  <div class="flex justify-between font-semibold text-gray-800">
-                    <span class="capitalize text-blue-600">{{ h.accion }} ({{ h.tipo_recurso }})</span>
-                    <span class="text-[10px] text-gray-400">{{ h.fecha | date:'short' }}</span>
-                  </div>
-                  <p class="text-[11px] text-gray-500 mt-0.5">Usuario: {{ h.usuario_id?.nombres || 'Sistema' }}</p>
-                </li>
-              } @empty {
-                <li class="text-xs text-gray-400 italic">No hay historial para los filtros seleccionados.</li>
-              }
-            </ul>
-          </div>
-
         </div>
       </div>
 

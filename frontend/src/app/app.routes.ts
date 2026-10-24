@@ -7,6 +7,7 @@ import { MiUnidadComponent } from './features/dashboard/pages/mi-unidad/mi-unida
 import { CompartidosComponent } from './features/dashboard/pages/compartidos/compartidos.component';
 import { ReportesComponent } from './features/dashboard/pages/reportes/reportes.component';
 import { UsuariosComponent } from './features/dashboard/pages/usuarios/usuarios.component';
+import { HistorialActividadComponent } from './features/dashboard/pages/historial-actividad/historial-actividad.component';
 
 export const routes: Routes = [
     { path: 'login', component: LoginComponent },
@@ -21,6 +22,7 @@ export const routes: Routes = [
             { path: 'compartidos/carpeta', component: MiUnidadComponent },
             { path: 'papelera', component: PapeleraComponent },
             { path: 'reportes', component: ReportesComponent },
+            { path: 'historial', component: HistorialActividadComponent },
             { path: 'usuarios', component: UsuariosComponent },
         ]
     },

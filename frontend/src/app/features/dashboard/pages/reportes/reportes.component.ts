@@ -12,7 +12,7 @@ import { CommonModule } from '@angular/common';
   templateUrl: './reportes.component.html',
   styleUrl: './reportes.component.css',
 })
-export class ReportesComponent implements OnInit{
+export class ReportesComponent implements OnInit {
   private reporteService = inject(ReporteService);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
@@ -21,18 +21,16 @@ export class ReportesComponent implements OnInit{
   cargando = signal<boolean>(true);
   sinPermisos = signal<boolean>(false);
 
-  // Filtros globales y específicos
+  // Filtros
   filtroFechaInicio = signal<string>('');
   filtroFechaFin = signal<string>('');
   usuarioSeleccionadoId = signal<string>('');
-  periodoActividad = signal<string>('dia');
 
   // Listas de datos
   listaUsuarios = signal<any[]>([]);
-  datosArchivos = signal<any>({ agrupadosPorTipo: [], totalArchivosRango: 0, archivosEnRango: [], archivosMasActivos: [] });
+  datosArchivos = signal<any>({ agrupadosPorTipo: [], totalArchivosRango: 0, archivosEnRango: [], archivosMasActivos: [], carpetasMasLlenas: [], archivosNoCompartidos: [] });
   datosUsuarios = signal<any>({ topArchivos: [], topCompartidores: [] });
   datosComparticion = signal<any>({ archivosMasCompartidos: [], compartidosPorUsuario: [], recibidosPorUsuario: [] });
-  datosActividad = signal<any>({ operacionesPorTipo: [], accionesGenerales: [], operacionesPorPeriodo: [], historialFiltrado: [] });
 
   // Totales computados
   totalArchivosSistema = computed(() =>
@@ -56,7 +54,6 @@ export class ReportesComponent implements OnInit{
   cargarDatosGenerales() {
     this.cargando.set(true);
 
-    // Cargar usuarios (para poblar los selectores de filtrado)
     this.reporteService.obtenerReporteUsuarios().subscribe({
       next: (res) => {
         this.datosUsuarios.set(res);
@@ -76,13 +73,11 @@ export class ReportesComponent implements OnInit{
     const fInicio = this.filtroFechaInicio();
     const fFin = this.filtroFechaFin();
     const uId = this.usuarioSeleccionadoId();
-    const periodo = this.periodoActividad();
 
-    // Peticiones paralelas adaptadas a los filtros
     let completadas = 0;
     const verificarFin = () => {
       completadas++;
-      if (completadas === 3) this.cargando.set(false);
+      if (completadas === 2) this.cargando.set(false);
     };
 
     // Archivos y almacenamiento (con rango de fechas)
@@ -96,19 +91,12 @@ export class ReportesComponent implements OnInit{
       next: (res) => { this.datosComparticion.set(res); verificarFin(); },
       error: () => verificarFin()
     });
-
-    // Actividad (con usuario, rango de fechas y período)
-    this.reporteService.obtenerReporteActividad({ usuarioId: uId, fechaInicio: fInicio, fechaFin: fFin, periodo }).subscribe({
-      next: (res) => { this.datosActividad.set(res); verificarFin(); },
-      error: () => verificarFin()
-    });
   }
 
   limpiarFiltros() {
     this.filtroFechaInicio.set('');
     this.filtroFechaFin.set('');
     this.usuarioSeleccionadoId.set('');
-    this.periodoActividad.set('dia');
     this.aplicarFiltros();
   }
 

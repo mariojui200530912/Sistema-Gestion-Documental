@@ -161,6 +161,7 @@
               [menuActivo]="menuActivoId() === archivo._id"
               [nivelPermiso]="obtenerNivelPermiso(archivo)"
               [mostrarInfoCompartido]="esContextoCompartido()"
+              (onAbrir)="abrirModalVisor(archivo)"
               (onDescargar)="onDescargarArchivo.emit(archivo)"
               (onToggleMenu)="toggleMenu($event, archivo._id)"
               (onRenombrar)="abrirModalRenombrar($event, archivo, 'archivo')"
@@ -221,4 +222,11 @@
 
 @if (mostrarModalComentarios()) {
   <app-modal-comentario [item]="itemSeleccionado()" [tipo]="tipoItemSeleccionado()!" (onCerrar)="mostrarModalComentarios.set(false)" (onComentarioAgregado)="recargarVista()"></app-modal-comentario>
+}
+
+@if (mostrarModalVisor()) {
+  <app-modal-visor
+    [archivo]="itemSeleccionado()"
+    (onCerrar)="mostrarModalVisor.set(false)">
+  </app-modal-visor>
 }

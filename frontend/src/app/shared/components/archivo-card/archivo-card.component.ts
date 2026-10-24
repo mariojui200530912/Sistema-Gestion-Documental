@@ -14,7 +14,8 @@ export class ArchivoCardComponent {
   nivelPermiso = input<string>('lectura');
   mostrarInfoCompartido = input<boolean>(false);
 
-  onDescargar = output<void>();
+  onAbrir = output<void>();
+  onDescargar = output<Event>();
   onToggleMenu = output<Event>();
   onRenombrar = output<Event>();
   onMover = output<Event>();

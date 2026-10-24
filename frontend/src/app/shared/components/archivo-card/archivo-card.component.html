@@ -33,7 +33,7 @@
 
   <!-- PREVISUALIZACIÓN / ICONO CENTRAL (Click para descargar) -->
   <div 
-    (click)="!modoPapelera() && onDescargar.emit()" 
+    (dblclick)="!modoPapelera() && onAbrir.emit()" 
     [class.cursor-pointer]="!modoPapelera()"
     class="h-28 bg-gray-50 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-50/50 transition-colors">
     <svg class="w-12 h-12 text-gray-400 group-hover:text-blue-500 transition-colors" fill="currentColor" viewBox="0 0 20 20">
@@ -68,6 +68,12 @@
     <div class="absolute right-2 top-10 w-52 bg-white border border-gray-200 rounded-lg shadow-xl z-30 py-1" (click)="$event.stopPropagation()">
       
       @if (!modoPapelera()) {
+
+        
+        <button (click)="onDescargar.emit($event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+          <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          Descargar
+        </button>
         
         <!-- COMPARTIR: Solo Propietario -->
         @if (nivelPermiso() === 'propietario') {

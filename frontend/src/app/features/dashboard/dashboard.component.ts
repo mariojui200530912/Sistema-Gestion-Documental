@@ -25,7 +25,7 @@ export class DashboardComponent implements OnInit{
     if (!asignado || asignado <= 0) return 0;
     
     const pct = (usado / asignado) * 100;
-    return Math.min(Math.round(pct * 10) / 10, 100);
+    return Math.min(pct, 100);
   });
   
   ngOnInit() {

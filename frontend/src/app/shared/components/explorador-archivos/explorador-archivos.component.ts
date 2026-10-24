@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { ModalComentarioComponent } from '../modals/modal-comentarios/modal-comentario.component';
 import { ComparticionService } from '../../../core/services/comparticion.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ModalVisorComponent } from '../modals/modal-visor/modal-visor.component';
 
 @Component({
   selector: 'app-explorador-archivos',
@@ -27,7 +28,8 @@ import { ToastService } from '../../../core/services/toast.service';
     ModalCompartirComponent,
     ModalComentarioComponent,
     ModalArchivo,
-    ModalCarpeta
+    ModalCarpeta,
+    ModalVisorComponent
   ],
   templateUrl: './explorador-archivos.component.html',
   styleUrl: './explorador-archivos.component.css',
@@ -69,6 +71,7 @@ export class ExploradorArchivosComponent {
   mostrarModalConfirmacion = signal<boolean>(false);
   mostrarModalCompartir = signal<boolean>(false);
   mostrarModalComentarios = signal<boolean>(false);
+  mostrarModalVisor = signal<boolean>(false);
 
   // --- CONTROL DE MENUS Y PERMISOS ---
   toggleMenu(event: Event, id: string) {
@@ -261,5 +264,11 @@ export class ExploradorArchivosComponent {
   abrirModalCarpeta() {
     this.cerrarMenus();
     this.mostrarModalCarpeta.set(true);
+  }
+
+  abrirModalVisor(archivo: any) {
+    this.cerrarMenus();
+    this.itemSeleccionado.set(archivo);
+    this.mostrarModalVisor.set(true);
   }
 }

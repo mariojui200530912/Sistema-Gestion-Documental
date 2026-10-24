@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Archivo = require('../models/Archivo');
+const Carpeta = require('../models/Carpeta');
 const Usuario = require('../models/Usuario');
 const HistorialActividad = require('../models/HistorialActividad');
 
@@ -45,11 +46,32 @@ class ReporteService {
             { $project: { _id: 1, cantidadOperaciones: 1, "archivoInfo.nombre": 1, "archivoInfo.tipo_archivo": 1 } }
         ]);
 
+        const carpetasMasLlenas = await Archivo.aggregate([
+            { $match: { carpeta_id: { $ne: null } } }, 
+            { $group: { _id: "$carpeta_id", totalArchivos: { $sum: 1 }, espacioOcupado: { $sum: "$tamano" } } },
+            { $sort: { totalArchivos: -1 } },
+            { $limit: 10 },
+            { $lookup: { from: 'carpetas', localField: '_id', foreignField: '_id', as: 'carpeta' } },
+            { $unwind: "$carpeta" },
+            { $project: { _id: 1, totalArchivos: 1, espacioOcupado: 1, "carpeta.nombre": 1 } }
+        ]);
+
+        const archivosNoCompartidos = await Archivo.aggregate([
+            { $match: { $or: [{ accesos: { $exists: false } }, { accesos: { $size: 0 } }] } },
+            { $sort: { createdAt: -1 } },
+            { $limit: 15 },
+            { $lookup: { from: 'usuarios', localField: 'propietario_id', foreignField: '_id', as: 'propietario' } },
+            { $unwind: "$propietario" },
+            { $project: { nombre: 1, tipo_archivo: 1, tamano: 1, "propietario.nombres": 1, "propietario.correo": 1 } }
+        ]);
+
         return {
             agrupadosPorTipo,
             totalArchivosRango: archivosEnRango.length,
             archivosEnRango,
-            archivosMasActivos
+            archivosMasActivos,
+            carpetasMasLlenas,
+            archivosNoCompartidos
         };
     }
 
